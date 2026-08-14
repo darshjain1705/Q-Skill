@@ -1,0 +1,7 @@
+,MAE,routing_agreement,weight_std_over_time
+logit + softmax (fixed),0.241223312444138,0.8625,0.2869200927507927
+"logit, early_stopping=True",0.2540109158255802,0.8675,0.28288986170611485
+"weight-space, early_stopping=True",0.42970716749840454,0.865,0.20759581378567382
+weight-space + clipping,0.44069343063463706,0.865,0.20352191914479045
+static combiner (control),0.9108721218705219,,0.0
+best single expert,0.9848505506844716,,

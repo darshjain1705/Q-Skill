@@ -1,125 +1,154 @@
-# LME Zinc & Aluminium Forecasting — Regime/Inventory-Conditioned Gated Mixture-of-Experts
+# LME Zinc & Aluminium Forecasting — Routing vs. Representation
 
-A 3-credit, one-semester research project: a novel gating architecture that
-dynamically combines multiple forecasting models ("experts") for LME zinc
-and aluminium prices, with the gate conditioned on market regime and a
-custom warehouse-inventory-pressure index.
+A one-semester research project on forecast combination for LME base metals.
+
+**The research question changed.** It began as "does a warehouse-inventory-pressure
+signal improve a gated Mixture-of-Experts ensemble?" A code-level audit found that
+the pipeline could not answer that question — the experts never saw the signal under
+any condition, so a null result was uninterpretable — and that the gate was
+mathematically incapable of adapting. The question is now:
+
+> **Should a fundamental signal inform the forecast, or the choice of forecaster?**
+
+See `../docs/lme-forecast-project-audit.md` for the audit of the original code and
+`../docs/routing-vs-representation.md` for the new design and its results.
+
+---
+
+## Quickstart
+
+```bash
+pip install -r requirements.txt
+
+cd src
+python synthetic_regime.py          # build the controlled testbed
+python experiment.py --metal aluminium
+```
+
+To regenerate every number quoted in the documentation (~20 min):
+
+```bash
+cd src && python reproduce.py       # writes to ../results/
+```
+
+---
 
 ## Project structure
 
 ```
-lme-forecast/
-├── data/                    # raw + processed data (gitignored in practice)
+lme-forecast-project/
+├── data/                      generated + downloaded datasets
+├── results/                   output of reproduce.py (tables + run log)
 ├── src/
-│   ├── fetch_data.py        # pulls World Bank + Yahoo Finance data (run locally, needs internet)
-│   ├── make_synthetic_data.py  # generates fake-but-realistic data for pipeline testing
-│   ├── features.py          # lag features + regime detection + inventory-pressure index (NOVEL)
-│   ├── experts.py           # ARIMA / XGBoost / Sequence base forecasters
-│   ├── gating.py            # the gating network (NOVEL — core contribution)
-│   └── train.py             # full pipeline: train, evaluate, ablate
-├── app/
-│   └── app.py               # Streamlit demo app
-├── paper/                   # write-up drafts go here
-└── requirements.txt
+│   ├── synthetic_regime.py    controlled testbed with known ground-truth routing
+│   ├── featureset.py          return-target features; expert/gate column partition
+│   ├── expert_panel.py        four experts behind one interface
+│   ├── oof.py                 blocked out-of-fold predictions for honest supervision
+│   ├── gating.py              static / gated / oracle / clustered combiners
+│   ├── metrics.py             MASE, RelMAE, Diebold-Mariano, gate diagnostics
+│   ├── experiment.py          the 2x2, controls, and the gain decomposition
+│   ├── reproduce.py           regenerates every documented number
+│   │
+│   ├── fetch_data.py          World Bank + Yahoo Finance download (needs internet)
+│   ├── prepare_real_data.py   merges raw downloads into the pipeline schema
+│   │
+│   ├── features.py            ORIGINAL level-target features (superseded)
+│   ├── experts.py             ORIGINAL expert classes (superseded)
+│   ├── train.py               ORIGINAL level-target pipeline (superseded)
+│   └── make_synthetic_data.py ORIGINAL random-walk generator (superseded)
+├── app/app.py                 Streamlit demo
+└── paper/                     proposal + drafts
 ```
 
-## Setup
+The four modules marked *superseded* are kept so the audit's findings remain
+reproducible against the code they describe. New work should use the modules above
+them.
 
-```bash
-pip install -r requirements.txt
+---
+
+## The experimental design
+
+All four conditions share one feature frame, one set of folds, and one `dropna`, so
+they differ **only** in which columns each component is allowed to read.
+
+|                     | Gate without inventory | Gate with inventory |
+|---------------------|------------------------|---------------------|
+| **Experts without** | (a) neither            | (c) routing only    |
+| **Experts with**    | (b) representation     | (d) both            |
+
+### Controls
+
+Three, all absent from the original design and all load-bearing:
+
+- **Random walk** — the real benchmark for a return forecast. Everything is reported
+  relative to it.
+- **Static NNLS combiner** — one fixed weight vector. If the gate cannot beat this,
+  "dynamic" bought nothing regardless of how it compares to single experts.
+- **Oracle router** — routes on ground-truth regime labels. Not a competitor, an
+  upper bound. Without it, "the gate did not help" cannot be distinguished from
+  "there was nothing to exploit".
+
+Every combiner is trained on out-of-fold expert predictions. Every comparison carries
+a Diebold–Mariano test.
+
+---
+
+## Headline result
+
+On the controlled testbed, regime-conditional combination genuinely beats static
+combination — 1.6% on zinc, 3.5% on aluminium, both significant. **No learned router
+captures it.** The decomposition shows why:
+
+```
+                          classifier acc    oracle gain    retained by best learned
+zinc                          0.675          1.56%              11%
+aluminium                     0.779          3.52%              40%
 ```
 
-## Quickstart (synthetic data, works offline)
+Regime misclassification alone consumes most of the available gain, even holding the
+regime-conditional weights perfect. The inventory signal — which predicts the next
+regime at AUC 0.85–0.90 — is not the bottleneck. Identification accuracy is.
 
-```bash
-cd src
-python make_synthetic_data.py --outdir ../data
-python features.py            # builds zinc_features.csv
-# repeat for aluminium by editing the price_col/inventory_col at the bottom of features.py
-python train.py                # trains experts + gate, prints comparison table
-cd ../app
-streamlit run app.py
-```
+**These numbers are from the synthetic testbed.** It exists to establish that the
+machinery works and that the failure mode is real. It is a prerequisite for the
+real-data experiment, not a substitute for it.
 
-## Recent changes (Aug 2026)
+---
 
-- `src/fetch_data.py`: World Bank download URL updated to the current
-  working link (verified Aug 2026). This will go stale again eventually —
-  see the note in the file for how to refresh it.
-- `src/train.py`: **rewritten** to do expanding-window walk-forward
-  backtesting (6 folds by default) instead of a single static train/test
-  split, matching what Section 4.3 of the proposal promises. Run it the
-  same way (`python train.py`); it now also prints per-fold MAE so you
-  can see whether the gated model is stable across different time periods
-  / regimes, and reports directional accuracy alongside MAE/RMSE.
-- `src/prepare_real_data.py`: **new**. Once you've run `fetch_data.py` (or
-  sourced data manually — e.g. Metals-API for daily zinc, LME's site for
-  warehouse inventory), edit the CONFIG section at the top of this file to
-  point at your downloaded files, then run it. It merges everything into
-  the pipeline's expected schema (`date`, `{metal}_close`,
-  `{metal}_volume`, `{metal}_inventory`), and produces both a full-history
-  file and a 5-year working slice. It will loudly warn (not silently
-  guess) if daily zinc or inventory data is missing, since both are
-  currently unsolved gaps — see "What's still missing" below.
+## Defects fixed (each reproduced numerically)
 
-## What's still missing before you can run real experiments
+| Defect | Evidence | Fix |
+|---|---|---|
+| Double `softmax` in the gate | Weights collapsed to a constant `[0.564, 0.219, 0.217]`, matching `softmax([1,0,0])` | Regress onto log-weights, softmax at inference |
+| Gate supervised on in-sample expert predictions | Boosting: 11.85 MAE in-sample → 576.37 out-of-sample; oracle gave it weight 0.97 | Blocked out-of-fold predictions (`oof.py`) |
+| `early_stopping=True` on short windows | Routing agreement fell to 0.100 — worse than chance | Off by default; regularize with `alpha` |
+| Unscaled MLP target | Log returns ~1e-2; sequence expert scored 0.049 vs 0.010 for others | `TransformedTargetRegressor` |
+| Price levels as the target | Made every metric a persistence contest | Target is next-day log return |
+| `ARIMAExpert` never imported | Absent from every reported result | Wired into `expert_panel.py` |
+| Third "expert" was `shift(1)` | Identical to the benchmark it competed against | Removed from the panel |
 
-1. **Daily zinc prices.** No free daily source exists (see
-   `fetch_data.py`'s docstring). You need Metals-API, Nasdaq Data Link, or
-   institutional Bloomberg/Refinitiv access — or consciously accept
-   monthly-frequency zinc and disclose it as a limitation.
-2. **Warehouse inventory data**, which the entire "novel feature" of this
-   project depends on. Not bundled in any of the free sources above.
-   Check https://www.lme.com/en/Market-data/LME-warehouse-and-stocks-data.
-   `prepare_real_data.py` will produce NaN inventory columns and warn
-   loudly until this is sourced — `features.py` cannot compute the
-   inventory-pressure index on NaN data.
+---
 
-## Moving to real data
+## Still missing before real experiments
 
-1. Run `src/fetch_data.py` **on a machine with open internet access** (this
-   pulls World Bank Pink Sheet monthly data + Yahoo Finance daily aluminium
-   futures). Update the `WORLD_BANK_PINK_SHEET_URL` constant if the World
-   Bank has rotated their file link (check
-   https://www.worldbank.org/en/research/commodity-markets).
-2. For daily-frequency zinc (Yahoo Finance doesn't carry it), evaluate a
-   paid source: [Metals-API](https://metals-api.com) has zinc back to 2008
-   with a free/trial tier, or check your institution's Bloomberg/Refinitiv
-   access if available.
-3. For inventory data specifically (needed for the inventory-pressure
-   index), LME publishes daily warehouse stock reports — check
-   https://www.lme.com/en/Market-data/LME-warehouse-and-stocks-data for
-   current access options.
-4. Replace `data/synthetic_lme_daily.csv` with your real merged dataset
-   (same column naming convention: `{metal}_close`, `{metal}_volume`,
-   `{metal}_inventory`) and rerun the pipeline above.
+1. **LME warehouse inventory.** The signal the whole question rests on. Not bundled
+   with any free source — see
+   <https://www.lme.com/en/Market-data/LME-warehouse-and-stocks-data>.
+   `prepare_real_data.py` warns loudly rather than silently guessing.
+2. **Daily zinc prices.** No free daily source. Metals-API, Nasdaq Data Link, or
+   institutional access — or a conscious decision to run zinc monthly and disclose it.
+   Forward-filling monthly prices to a daily index produces a series that updates
+   twelve times a year and must not be presented as daily.
+3. **A regime model for real data.** The testbed has ground-truth labels; real data
+   does not. Fit a Markov-switching model on the training window only, so the oracle
+   bound becomes estimated rather than exact — and report sensitivity to it.
 
-## What's a placeholder vs. what's real
+---
 
-- **SequenceExpert** is currently an MLP over flattened lag windows, not a
-  true LSTM — this sandbox couldn't fit PyTorch on disk. Swap it for a real
-  LSTM/GRU (PyTorch) once you're on your own machine; the interface
-  (`.fit()` / `.predict()`) is designed as a drop-in replacement so nothing
-  else in the pipeline needs to change.
-- **Gating network training** uses an "oracle-supervised" approach (train
-  the gate to imitate inverse-trailing-error weighting) rather than fully
-  joint end-to-end backprop through experts + gate. This is a legitimate,
-  citable design choice, but if you want the strongest version for the
-  paper, the natural extension is end-to-end joint training in PyTorch —
-  documented as future work either way.
-- **Inventory-pressure index formula** (`features.py`) is a first-draft
-  formulation — you'll want to justify/tune the weighting (0.5/0.3/0.2)
-  and possibly test alternative formulations as a robustness check in the
-  paper.
+## Placeholders
 
-## Ablations already wired up in train.py
-
-- Full gated model vs. simple average ensemble vs. best single expert vs.
-  naive persistence baseline
-- Gated model **with** vs. **without** the inventory-pressure signal in
-  the gate's state vector (this is your key "does the novel feature
-  matter" result)
-
-Next to add as you go: with/without regime (Hurst) signal, gate weight
-visualization overlaid on known historical volatility events, and
-cross-metal (zinc+aluminium joint) gating as a stretch goal.
+- **SequenceExpert** is an MLP over the lagged-return block, not an LSTM. The
+  `fit`/`predict` interface makes a PyTorch replacement a genuine drop-in.
+- **Inventory-pressure weights** (0.5/0.3/0.2) are now a parameter of
+  `featureset.inventory_pressure_index` rather than three literals in the body, so
+  they can be swept as a robustness check instead of asserted.

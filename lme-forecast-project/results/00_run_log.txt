@@ -1,0 +1,307 @@
+Reproduction run started 2026-08-14 12:23:45
+numpy 2.4.6 | pandas 3.0.5 | python 3.11.15
+
+==============================================================================
+0. CONTROLLED TESTBED
+  supports: docs section 2 -- regimes differ by model class, signal leads
+==============================================================================
+zinc: 2500 rows | linear-regime share 57.28% | switches 44 | AR(1) of returns: linear=+0.522 threshold=+0.360
+aluminium: 2500 rows | linear-regime share 51.08% | switches 50 | AR(1) of returns: linear=+0.447 threshold=+0.275
+Saved /home/user/Q-Skill/lme-forecast-project/data/synthetic_regime_daily.csv
+
+==============================================================================
+1. GATE SELF-TEST
+  supports: docs section 3 -- double-softmax and early_stopping defects
+==============================================================================
+                                      MAE  routing_agreement  weight_std_over_time
+logit + softmax (fixed)            0.2412             0.8625                0.2869
+logit, early_stopping=True         0.2540             0.8675                0.2829
+weight-space, early_stopping=True  0.4297             0.8650                0.2076
+weight-space + clipping            0.4407             0.8650                0.2035
+static combiner (control)          0.9109                NaN                0.0000
+best single expert                 0.9849                NaN                   NaN
+    -> results/01_gate_selftest.csv
+
+==============================================================================
+2. EXPERT SPECIALIZATION BY REGIME
+  supports: docs section 2 -- boosting/ARIMA cross over between regimes
+==============================================================================
+                    MAE_linear_regime  MAE_threshold_regime  relMAE_vs_RW_linear  relMAE_vs_RW_threshold
+metal     expert                                                                                        
+zinc      ridge_ar             0.0102                0.0129               0.8692                  0.8946
+          arima                0.0101                0.0130               0.8615                  0.8961
+          boosting             0.0111                0.0124               0.9455                  0.8543
+          sequence             0.0147                0.0153               1.2507                  1.0596
+aluminium ridge_ar             0.0091                0.0119               0.9056                  0.9499
+          arima                0.0090                0.0119               0.8977                  0.9491
+          boosting             0.0105                0.0111               1.0533                  0.8806
+          sequence             0.0140                0.0141               1.3980                  1.1239
+    -> results/02_expert_specialization.csv
+
+==============================================================================
+3. IS THE REGIME PREDICTABLE FROM THE GATE'S INPUTS?
+  supports: docs section 4 -- inventory pressure predicts regime at AUC 0.85-0.90
+==============================================================================
+                                   n_gate_features     AUC
+metal     condition classifier                            
+zinc      neither   logistic                   4.0  0.5919
+                    random_forest              4.0  0.5778
+          routing   logistic                   5.0  0.8486
+                    random_forest              5.0  0.8384
+aluminium neither   logistic                   4.0  0.6785
+                    random_forest              4.0  0.6412
+          routing   logistic                   5.0  0.8976
+                    random_forest              5.0  0.8796
+    -> results/03_regime_predictability.csv
+
+==============================================================================
+4. ROUTING-GAIN DECOMPOSITION
+  supports: docs section 4 -- THE HEADLINE RESULT
+==============================================================================
+
+--- zinc / neither ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.011389     0.000000          NaN
+oracle regime + oracle wts            0.011157    -2.035812     0.006222
+predicted regime (hard) + oracle wts  0.011669     2.456020     0.000267
+predicted regime (soft) + oracle wts  0.011607     1.913176     0.001330
+learned gate (error imitation)        0.012484     9.616555     0.000005
+clustered router (k=3)                0.012940    13.616449     0.000000
+  regime classifier accuracy      : 0.4617
+  oracle gain over static         : 2.036%
+  fraction retained by best learned: -0.9398
+
+--- zinc / routing ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.011389     0.000000          NaN
+oracle regime + oracle wts            0.011157    -2.035812     0.006222
+predicted regime (hard) + oracle wts  0.011371    -0.156275     0.824016
+predicted regime (soft) + oracle wts  0.011359    -0.260938     0.692627
+learned gate (error imitation)        0.011925     4.707027     0.000318
+clustered router (k=3)                0.012808    12.461345     0.000000
+  regime classifier accuracy      : 0.6749
+  oracle gain over static         : 2.036%
+  fraction retained by best learned: 0.1282
+
+--- zinc / representation ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.011292     0.000000          NaN
+oracle regime + oracle wts            0.011116    -1.562686     0.018450
+predicted regime (hard) + oracle wts  0.011447     1.371805     0.012751
+predicted regime (soft) + oracle wts  0.011405     0.996779     0.035299
+learned gate (error imitation)        0.011740     3.960599     0.000335
+clustered router (k=3)                0.012081     6.986517     0.000048
+  regime classifier accuracy      : 0.5082
+  oracle gain over static         : 1.563%
+  fraction retained by best learned: -0.6379
+
+--- zinc / both ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.011292     0.000000          NaN
+oracle regime + oracle wts            0.011116    -1.562686     0.018450
+predicted regime (hard) + oracle wts  0.011286    -0.055051     0.920637
+predicted regime (soft) + oracle wts  0.011273    -0.171215     0.737443
+learned gate (error imitation)        0.011828     4.746542     0.000814
+clustered router (k=3)                0.012213     8.154574     0.000008
+  regime classifier accuracy      : 0.6749
+  oracle gain over static         : 1.563%
+  fraction retained by best learned: 0.1096
+
+--- aluminium / neither ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.010399     0.000000          NaN
+oracle regime + oracle wts            0.010037    -3.476273     0.001242
+predicted regime (hard) + oracle wts  0.010630     2.228859     0.042807
+predicted regime (soft) + oracle wts  0.010578     1.727378     0.066712
+learned gate (error imitation)        0.011154     7.263873     0.000038
+clustered router (k=3)                0.010962     5.414877     0.000064
+  regime classifier accuracy      : 0.5738
+  oracle gain over static         : 3.476%
+  fraction retained by best learned: -0.4969
+
+--- aluminium / routing ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.010399     0.000000          NaN
+oracle regime + oracle wts            0.010037    -3.476273     0.001242
+predicted regime (hard) + oracle wts  0.010300    -0.944612     0.369772
+predicted regime (soft) + oracle wts  0.010273    -1.207044     0.221884
+learned gate (error imitation)        0.011006     5.843363     0.000647
+clustered router (k=3)                0.010663     2.544267     0.065183
+  regime classifier accuracy      : 0.8046
+  oracle gain over static         : 3.476%
+  fraction retained by best learned: 0.3472
+
+--- aluminium / representation ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.010080     0.000000          NaN
+oracle regime + oracle wts            0.009725    -3.524483     0.000269
+predicted regime (hard) + oracle wts  0.010051    -0.289093     0.759269
+predicted regime (soft) + oracle wts  0.010092     0.118694     0.884518
+learned gate (error imitation)        0.010774     6.884521     0.000000
+clustered router (k=3)                0.010473     3.890829     0.000230
+  regime classifier accuracy      : 0.6066
+  oracle gain over static         : 3.524%
+  fraction retained by best learned: -0.0337
+
+--- aluminium / both ---
+                                           MAE  vs_static_%  p_vs_static
+static (no routing)                   0.010080     0.000000          NaN
+oracle regime + oracle wts            0.009725    -3.524483     0.000269
+predicted regime (hard) + oracle wts  0.009968    -1.116065     0.245408
+predicted regime (soft) + oracle wts  0.009939    -1.400944     0.118286
+learned gate (error imitation)        0.010634     5.492582     0.000413
+clustered router (k=3)                0.010346     2.638649     0.016838
+  regime classifier accuracy      : 0.7787
+  oracle gain over static         : 3.524%
+  fraction retained by best learned: 0.3975
+    -> results/04_routing_gain_decomposition.csv
+    -> results/04_decomposition_summary.csv
+
+==============================================================================
+5. FULL 2x2 WALK-FORWARD
+  supports: docs section 1 -- routing vs representation, all models
+==============================================================================
+
+######## zinc ########
+
+### condition = neither   (zinc: 16 expert features, 4 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.01080  0.01373       0.85028  0.82095  0.66393      1.0      0.0      0.00327
+static_nnls      0.01098  0.01400       0.86452  0.83470  0.64016      1.0      0.0          NaN
+gated_trailing   0.01111  0.01424       0.87410  0.84395  0.64918      1.0      0.0      0.17027
+expert_arima     0.01112  0.01418       0.87510  0.84492  0.63852      1.0      0.0      0.04111
+expert_ridge_ar  0.01116  0.01423       0.87857  0.84827  0.62869      1.0      0.0      0.00813
+expert_boosting  0.01122  0.01429       0.88311  0.85265  0.63033      1.0      0.0      0.00714
+simple_avg       0.01133  0.01442       0.89175  0.86099  0.63934      1.0      0.0      0.00018
+gated            0.01150  0.01469       0.90532  0.87409  0.64180      1.0      0.0      0.00002
+rw               0.01271  0.01618       1.00000  0.96551      NaN      0.0      NaN      0.00000
+expert_sequence  0.01574  0.02026       1.23876  1.19603  0.56311      1.0      0.0      0.00000
+  routing agreement 0.267 (chance 0.250)  |  effective experts 3.06 of 4
+
+### condition = representation   (zinc: 18 expert features, 4 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.01063  0.01351       0.83652  0.80766  0.69426      1.0      0.0      0.00023
+static_nnls      0.01085  0.01379       0.85422  0.82476  0.65902      1.0      0.0          NaN
+gated_trailing   0.01089  0.01393       0.85702  0.82746  0.65738      1.0      0.0      0.70684
+expert_boosting  0.01100  0.01400       0.86564  0.83579  0.65574      1.0      0.0      0.06658
+expert_arima     0.01112  0.01418       0.87510  0.84492  0.63852      1.0      0.0      0.00285
+simple_avg       0.01114  0.01411       0.87639  0.84616  0.65000      1.0      0.0      0.00083
+expert_ridge_ar  0.01116  0.01423       0.87857  0.84827  0.62869      1.0      0.0      0.00065
+gated            0.01124  0.01426       0.88488  0.85436  0.64590      1.0      0.0      0.00001
+rw               0.01271  0.01618       1.00000  0.96551      NaN      0.0      NaN      0.00000
+expert_sequence  0.01541  0.01964       1.21266  1.17083  0.57213      1.0      0.0      0.00000
+  routing agreement 0.259 (chance 0.250)  |  effective experts 3.06 of 4
+
+### condition = routing   (zinc: 16 expert features, 5 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.01080  0.01373       0.85028  0.82095  0.66393      1.0      0.0      0.00327
+static_nnls      0.01098  0.01400       0.86452  0.83470  0.64016      1.0      0.0          NaN
+gated_trailing   0.01111  0.01425       0.87449  0.84433  0.65164      1.0      0.0      0.15680
+expert_arima     0.01112  0.01418       0.87510  0.84492  0.63852      1.0      0.0      0.04111
+expert_ridge_ar  0.01116  0.01423       0.87857  0.84827  0.62869      1.0      0.0      0.00813
+expert_boosting  0.01122  0.01429       0.88311  0.85265  0.63033      1.0      0.0      0.00714
+simple_avg       0.01133  0.01442       0.89175  0.86099  0.63934      1.0      0.0      0.00018
+gated            0.01146  0.01471       0.90206  0.87094  0.62541      1.0      0.0      0.00011
+rw               0.01271  0.01618       1.00000  0.96551      NaN      0.0      NaN      0.00000
+expert_sequence  0.01574  0.02026       1.23876  1.19603  0.56311      1.0      0.0      0.00000
+  routing agreement 0.275 (chance 0.250)  |  effective experts 2.91 of 4
+
+### condition = both   (zinc: 18 expert features, 5 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.01063  0.01351       0.83652  0.80766  0.69426      1.0      0.0      0.00023
+static_nnls      0.01085  0.01379       0.85422  0.82476  0.65902      1.0      0.0          NaN
+gated_trailing   0.01092  0.01402       0.85939  0.82974  0.65738      1.0      0.0      0.52746
+expert_boosting  0.01100  0.01400       0.86564  0.83579  0.65574      1.0      0.0      0.06658
+expert_arima     0.01112  0.01418       0.87510  0.84492  0.63852      1.0      0.0      0.00285
+simple_avg       0.01114  0.01411       0.87639  0.84616  0.65000      1.0      0.0      0.00083
+expert_ridge_ar  0.01116  0.01423       0.87857  0.84827  0.62869      1.0      0.0      0.00065
+gated            0.01152  0.01451       0.90640  0.87513  0.64180      1.0      0.0      0.00000
+rw               0.01271  0.01618       1.00000  0.96551      NaN      0.0      NaN      0.00000
+expert_sequence  0.01541  0.01964       1.21266  1.17083  0.57213      1.0      0.0      0.00000
+  routing agreement 0.253 (chance 0.250)  |  effective experts 2.94 of 4
+    -> results/05_zinc_neither_models.csv
+    -> results/05_zinc_representation_models.csv
+    -> results/05_zinc_routing_models.csv
+    -> results/05_zinc_both_models.csv
+
+  ROUTING vs REPRESENTATION
+                gated_fwd_MAE  gated_trail_MAE  gated_RelMAE  gated_MAE  static_MAE  best_expert_MAE  oracle_MAE  gate_p_vs_static  gain_vs_neither_%
+neither              0.011503         0.011107      0.905317   0.011503    0.010985         0.011119    0.010804          0.000017           0.000000
+representation       0.011244         0.010890      0.884877   0.011244    0.010854         0.010999    0.010629          0.000014           2.257693
+routing              0.011462         0.011112      0.902058   0.011462    0.010985         0.011119    0.010804          0.000108           0.359952
+both                 0.011517         0.010920      0.906395   0.011517    0.010854         0.010999    0.010629          0.000000          -0.119164
+    -> results/05_zinc_routing_vs_representation.csv
+    -> results/05_zinc_gate_diagnostics.csv
+
+######## aluminium ########
+
+### condition = neither   (aluminium: 16 expert features, 4 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.00984  0.01262       0.88457  0.70595  0.63115      1.0  0.00000      0.00006
+static_nnls      0.01018  0.01302       0.91493  0.73018  0.60738      1.0  0.00000          NaN
+expert_arima     0.01028  0.01325       0.92369  0.73716  0.60000      1.0  0.00000      0.07381
+gated_trailing   0.01028  0.01308       0.92371  0.73718  0.60082      1.0  0.00000      0.27288
+expert_ridge_ar  0.01032  0.01329       0.92703  0.73983  0.59016      1.0  0.00000      0.01386
+simple_avg       0.01043  0.01327       0.93688  0.74770  0.58525      1.0  0.00003      0.00179
+expert_boosting  0.01045  0.01327       0.93886  0.74927  0.58279      1.0  0.00030      0.01524
+gated            0.01080  0.01388       0.96999  0.77412  0.57705      1.0  0.06740      0.00000
+rw               0.01113  0.01434       1.00000  0.79807      NaN      0.0      NaN      0.00000
+expert_sequence  0.01475  0.01881       1.32572  1.05801  0.53689      1.0  0.00000      0.00000
+  routing agreement 0.249 (chance 0.250)  |  effective experts 2.87 of 4
+
+### condition = representation   (aluminium: 18 expert features, 4 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.00969  0.01232       0.87061  0.69481  0.63934      1.0  0.00000      0.00072
+static_nnls      0.00997  0.01268       0.89592  0.71501  0.60328      1.0  0.00000          NaN
+gated_trailing   0.01009  0.01296       0.90625  0.72324  0.61066      1.0  0.00000      0.16766
+simple_avg       0.01014  0.01285       0.91122  0.72722  0.59672      1.0  0.00000      0.01138
+expert_boosting  0.01021  0.01286       0.91744  0.73218  0.59590      1.0  0.00000      0.01374
+expert_arima     0.01028  0.01325       0.92369  0.73716  0.60000      1.0  0.00000      0.00010
+expert_ridge_ar  0.01032  0.01329       0.92703  0.73983  0.59016      1.0  0.00000      0.00001
+gated            0.01072  0.01376       0.96359  0.76901  0.59426      1.0  0.03449      0.00000
+rw               0.01113  0.01434       1.00000  0.79807      NaN      0.0      NaN      0.00000
+expert_sequence  0.01438  0.01820       1.29230  1.03134  0.57295      1.0  0.00000      0.00000
+  routing agreement 0.267 (chance 0.250)  |  effective experts 2.96 of 4
+
+### condition = routing   (aluminium: 16 expert features, 5 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.00984  0.01262       0.88457  0.70595  0.63115      1.0  0.00000      0.00006
+static_nnls      0.01018  0.01302       0.91493  0.73018  0.60738      1.0  0.00000          NaN
+gated_trailing   0.01027  0.01308       0.92239  0.73613  0.60246      1.0  0.00000      0.33519
+expert_arima     0.01028  0.01325       0.92369  0.73716  0.60000      1.0  0.00000      0.07381
+expert_ridge_ar  0.01032  0.01329       0.92703  0.73983  0.59016      1.0  0.00000      0.01386
+simple_avg       0.01043  0.01327       0.93688  0.74770  0.58525      1.0  0.00003      0.00179
+expert_boosting  0.01045  0.01327       0.93886  0.74927  0.58279      1.0  0.00030      0.01524
+gated            0.01085  0.01392       0.97510  0.77819  0.58689      1.0  0.14261      0.00000
+rw               0.01113  0.01434       1.00000  0.79807      NaN      0.0      NaN      0.00000
+expert_sequence  0.01475  0.01881       1.32572  1.05801  0.53689      1.0  0.00000      0.00000
+  routing agreement 0.238 (chance 0.250)  |  effective experts 2.77 of 4
+
+### condition = both   (aluminium: 18 expert features, 5 gate features)
+                     MAE     RMSE  RelMAE_vs_RW     MASE   DirAcc  DecRate  p_vs_RW  p_vs_static
+oracle_router    0.00969  0.01232       0.87061  0.69481  0.63934      1.0  0.00000      0.00072
+static_nnls      0.00997  0.01268       0.89592  0.71501  0.60328      1.0  0.00000          NaN
+gated_trailing   0.01009  0.01296       0.90631  0.72330  0.61721      1.0  0.00000      0.16820
+simple_avg       0.01014  0.01285       0.91122  0.72722  0.59672      1.0  0.00000      0.01138
+expert_boosting  0.01021  0.01286       0.91744  0.73218  0.59590      1.0  0.00000      0.01374
+expert_arima     0.01028  0.01325       0.92369  0.73716  0.60000      1.0  0.00000      0.00010
+expert_ridge_ar  0.01032  0.01329       0.92703  0.73983  0.59016      1.0  0.00000      0.00001
+gated            0.01059  0.01360       0.95162  0.75945  0.58525      1.0  0.00791      0.00000
+rw               0.01113  0.01434       1.00000  0.79807      NaN      0.0      NaN      0.00000
+expert_sequence  0.01438  0.01820       1.29230  1.03134  0.57295      1.0  0.00000      0.00000
+  routing agreement 0.267 (chance 0.250)  |  effective experts 2.81 of 4
+    -> results/05_aluminium_neither_models.csv
+    -> results/05_aluminium_representation_models.csv
+    -> results/05_aluminium_routing_models.csv
+    -> results/05_aluminium_both_models.csv
+
+  ROUTING vs REPRESENTATION
+                gated_fwd_MAE  gated_trail_MAE  gated_RelMAE  gated_MAE  static_MAE  best_expert_MAE  oracle_MAE  gate_p_vs_static  gain_vs_neither_%
+neither              0.010795         0.010280      0.969989   0.010795    0.010183         0.010280    0.009845          0.000000           0.000000
+representation       0.010724         0.010086      0.963595   0.010724    0.009971         0.010211    0.009689          0.000000           0.659230
+routing              0.010852         0.010266      0.975095   0.010852    0.010183         0.010280    0.009845          0.000000          -0.526426
+both                 0.010591         0.010087      0.951618   0.010591    0.009971         0.010211    0.009689          0.000001           1.893905
+    -> results/05_aluminium_routing_vs_representation.csv
+    -> results/05_aluminium_gate_diagnostics.csv
+
+Completed in 13.3 minutes.
