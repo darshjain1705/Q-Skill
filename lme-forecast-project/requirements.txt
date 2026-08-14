@@ -1,0 +1,12 @@
+pandas
+numpy
+scikit-learn
+xgboost
+statsmodels
+yfinance
+requests
+openpyxl
+streamlit
+
+# Optional, for when you move SequenceExpert to a real LSTM on your own machine:
+# torch
