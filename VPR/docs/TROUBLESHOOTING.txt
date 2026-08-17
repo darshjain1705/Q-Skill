@@ -1,0 +1,83 @@
+=====================================================================
+ TROUBLESHOOTING
+=====================================================================
+
+---------------------------------------------------------------------
+ THE LAUNCHER SAYS PYTHON IS MISSING
+---------------------------------------------------------------------
+  See SETUP.txt. Or skip the launcher entirely: double-click
+  vendor_rating.html, press "Select Files", pick both .xlsx files.
+
+---------------------------------------------------------------------
+ THE BLACK WINDOW OPENS AND CLOSES IMMEDIATELY
+---------------------------------------------------------------------
+  Usually the ports 8000-8003 are all in use, or an antivirus is
+  blocking python. Open the dashboard manually instead
+  (vendor_rating.html + "Select Files"), or restart the computer to
+  free the ports.
+
+---------------------------------------------------------------------
+ BROWSER OPENS BUT THE PAGE IS BLANK
+---------------------------------------------------------------------
+  The css\ and js\ folders must sit NEXT TO vendor_rating.html.
+  If you copied only the html file somewhere else, the page has no
+  code or styling. Always copy (or unzip) the WHOLE folder.
+
+---------------------------------------------------------------------
+ "COULD NOT LOAD THE EXCEL FILES AUTOMATICALLY"
+---------------------------------------------------------------------
+  The two .xlsx files must keep their exact names:
+      Vendor_Rating_Workbook.xlsx
+      Vendor_Master.xlsx
+  and must be in the same folder as vendor_rating.html. If you
+  renamed them, either rename them back or load them with
+  "Select Files".
+
+---------------------------------------------------------------------
+ NUMBERS LOOK WRONG OR OLD AFTER REPLACING THE WORKBOOK
+---------------------------------------------------------------------
+  The dashboard keeps imported ratings in the browser's local
+  storage per half-year. Press "Upload new Excel" in the top bar and
+  re-import - imports fully replace the stored half-years they touch.
+  If things still look odd, clear the browser's site data for
+  localhost and import again.
+
+---------------------------------------------------------------------
+ EXCEL SAYS THE WORKBOOK IS OPEN / LOCKED
+---------------------------------------------------------------------
+  Close the workbook in Excel before starting the launcher. Excel
+  holds a lock that can make the browser read a stale copy.
+
+---------------------------------------------------------------------
+ A TEAM'S NUMBERS DO NOT ADD UP TO 250
+---------------------------------------------------------------------
+  They always should: 125 POs x 2 half-years per category sheet.
+  Rows with no evaluator named are counted under "(no evaluator
+  named)" in Team Workload. If a total differs, a row was deleted
+  from that category sheet in Excel - check the sheet's row count.
+
+---------------------------------------------------------------------
+ THE STATUS COLUMN - WHAT COUNTS AS WHAT
+---------------------------------------------------------------------
+  "Approved"                    approved; evaluator's scores publish
+  "Changed and Approved"        approver changed the scores; the
+                                approver's scores publish
+  blank                         awaiting approval; nothing publishes
+  anything else                 treated as a written reason the PO
+                                was not evaluated (Not applicable)
+
+---------------------------------------------------------------------
+ PRINTING A VENDOR REPORT COMES OUT EMPTY
+---------------------------------------------------------------------
+  Use the Print button inside the dashboard (Completeness page),
+  not the browser's File > Print on a dashboard page. The built-in
+  one assembles a dedicated print layout first.
+
+---------------------------------------------------------------------
+ STILL STUCK
+---------------------------------------------------------------------
+  Open the browser console (F12 -> Console) and look for red lines.
+  The import also logs one summary line starting with
+  "[Rating Import]" - it shows how many cells, buyers/approvers and
+  POs were matched, which quickly shows whether the workbook was
+  read at all.

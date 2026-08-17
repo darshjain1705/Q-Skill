@@ -1,0 +1,200 @@
+=====================================================================
+ L&T VENDOR RATING DASHBOARD
+ WORKFLOW - how the whole thing works
+=====================================================================
+
+Four diagrams, top to bottom:
+
+  1. Startup - from double-click to a loaded dashboard
+  2. Data    - from the Excel files to what you see on screen
+  3. Rating  - the evaluation and approval life cycle of one PO
+  4. Code    - which file does what
+
+
+---------------------------------------------------------------------
+ 1. STARTUP FLOW
+---------------------------------------------------------------------
+
+              +---------------------------+
+              |  Double-click             |
+              |  START_WINDOWS.bat        |
+              |  (or START_MAC.command)   |
+              +------------+--------------+
+                           |
+                  Python found on PC?
+                   |               |
+                  YES              NO
+                   |               |
+                   v               v
+   +------------------------+   +--------------------------------+
+   | python -m http.server  |   | Opens vendor_rating.html       |
+   | on port 8000..8003     |   | directly (file:// manual mode) |
+   +-----------+------------+   +---------------+----------------+
+               |                                |
+               v                                v
+   +------------------------+   +--------------------------------+
+   | Browser opens          |   | User presses "Select Files"    |
+   | localhost:8000/        |   | and picks BOTH .xlsx files     |
+   | vendor_rating.html     |   +---------------+----------------+
+   +-----------+------------+                   |
+               |                                |
+               v                                |
+   +------------------------+                   |
+   | autoload.js fetches    |                   |
+   | Vendor_Rating_Workbook |                   |
+   | .xlsx + Vendor_Master  |                   |
+   | .xlsx from the folder  |                   |
+   +-----------+------------+                   |
+               |                                |
+               +----------------+---------------+
+                                |
+                                v
+                +-------------------------------+
+                |  Importer parses the sheets   |
+                |  (see DATA FLOW below)        |
+                +---------------+---------------+
+                                |
+                                v
+                +-------------------------------+
+                |  Dashboard renders PORTFOLIO  |
+                +-------------------------------+
+
+  Why the server? Browsers refuse to let a file:// page read other
+  files from disk. Served over http://localhost, the page may fetch
+  the two workbooks sitting next to it - that is the entire trick.
+
+
+---------------------------------------------------------------------
+ 2. DATA FLOW
+---------------------------------------------------------------------
+
+   Vendor_Rating_Workbook.xlsx                Vendor_Master.xlsx
+   +--------------------------+               +-----------------+
+   | PO Master  (125 POs)     |               | code, name,     |
+   | SCM        (250 rows)    |               | email, location |
+   | EDRC       (250 rows)    |               +--------+--------+
+   | Quality    (250 rows)    |                        |
+   | Operations (250 rows)    |                        |
+   | Parameters (definitions) |                        |
+   +------------+-------------+                        |
+                |                                      |
+                v                                      v
+   +---------------------------------------+  +-----------------+
+   | IMPORTER  (js/app/30-excel-import.js) |  | vendor contact  |
+   |                                       |  | + location map  |
+   | Each category row = one evaluation    |  +-----------------+
+   | task: PO x team x half-year.          |
+   |                                       |
+   | Per row it records:                   |
+   |  - EVALUATOR, APPROVER, STATUS        |
+   |  - published scores, gated by STATUS: |
+   |      "Approved" -> evaluator columns  |
+   |      other text -> approver columns   |
+   |      blank      -> no score published |
+   |  - evalProgress flag: did the         |
+   |    evaluator fill their columns AT    |
+   |    ALL (independent of STATUS)        |
+   +-------------------+-------------------+
+                       |
+                       v
+        Browser localStorage, per half-year
+   +---------------------------------------------+
+   |  lnt_itemRatings_H1   lnt_itemRatings_H2    |  scores
+   |  lnt_categoryMeta_H1  lnt_categoryMeta_H2   |  who/status
+   |  lnt_evalProgress_H1  lnt_evalProgress_H2   |  rated-or-not
+   +----------------------+----------------------+
+                          |
+            H1 / H2 / BOTH switch (top bar)
+                          |
+                          v
+   +---------------------------------------------+
+   |  Scope rebuild: single half reads that      |
+   |  half's stores; BOTH merges H1 + H2 and     |
+   |  counts each half as its own evaluation     |
+   +----------------------+----------------------+
+                          |
+     +---------+----------+----------+----------------+
+     v         v          v          v                v
+  PORTFOLIO  SCORECARD  COMPLETE-  TEAM            VENDOR
+  overview   rate/browse  NESS     WORKLOAD        FOCUS
+                                   who owes what   per-vendor
+
+  Why the evalProgress flag exists: scores are only published once
+  STATUS is set, so without the flag a fully-rated PO that no approver
+  has stamped yet would look identical to one never rated. The flag is
+  what lets Team Workload and Completeness say "rated 94, approved 8"
+  instead of the misleading "rated 8".
+
+
+---------------------------------------------------------------------
+ 3. RATING WORKFLOW - life cycle of one evaluation
+---------------------------------------------------------------------
+
+                        (one row on a category sheet)
+
+   +-----------+     evaluator fills      +--------------------+
+   |  BLANK    | ----------------------->  |  RATED             |
+   |  row      |   parameter columns       |  (evalProgress on) |
+   +-----------+                           +---------+----------+
+        |                                            |
+        | evaluator never                            |  approver sets
+        | assigned                                   |  STATUS
+        v                                            v
+   +--------------------+          +--------------------------------+
+   | "(no evaluator     |          |  STATUS decides the outcome:   |
+   |   named)" bucket   |          |                                |
+   | in Team Workload   |          |  "Approved"                    |
+   +--------------------+          |     -> APPROVED. Evaluator's   |
+                                   |        scores are published.   |
+                                   |                                |
+                                   |  "Changed and Approved"        |
+                                   |     -> CHANGED. Approver's own |
+                                   |        scores are published.   |
+                                   |                                |
+                                   |  blank                         |
+                                   |     -> AWAITING APPROVAL.      |
+                                   |        Nothing published yet.  |
+                                   |                                |
+                                   |  any other text                |
+                                   |     -> NOT APPLICABLE. Written |
+                                   |        reason why this PO was  |
+                                   |        not evaluated, e.g.     |
+                                   |        "Not offered for        |
+                                   |        inspection in H1".      |
+                                   +--------------------------------+
+
+  The same PO goes through this twice a year - once for H1, once for
+  H2 - possibly with a different evaluator, approver and even a
+  different ITEM (e.g. Cables in H1, Transformer in H2).
+
+
+---------------------------------------------------------------------
+ 4. CODE MAP
+---------------------------------------------------------------------
+
+   vendor_rating.html          Skeleton: header, nav, file input,
+                               and the ordered list of css/js files.
+
+   js/app/  (load order matters - one shared scope)
+     10-state-and-helpers.js   Global state, item lookups per half,
+                               vendor-master join, evaluator->team
+                               tags, navigation (go), setM renderer.
+     20-world-map.js           Vendor location map (Natural Earth).
+     30-excel-import.js        Everything described in DATA FLOW.
+     40-view-overview.js       Portfolio page + risk alerts.
+     50-view-team-workload.js  buildTeamTasks() task model + the
+                               Team Workload page.
+     60-vendor-and-project-... Vendor Focus, vendor page, project
+                               page, rating-breakdown modal.
+     70-rating-matrix-and-...  The parameter matrix (weights SCM 30 /
+                               EDRC 25 / Quality 25 / Operation 20),
+                               half-year state, copy/clear tools.
+     80-view-scorecard.js      Scorecard filters + matched items.
+     85-view-completeness.js   Completeness page + print reports.
+     90-reports-and-modals.js  H1/H2/BOTH scope logic, report modal,
+                               Excel export.
+
+   Rendering pattern: every page is one function (rOverview, rTeam,
+   rScorecard, rCompleteness, rVendors) that builds an HTML string
+   and hands it to setM(). Nothing is framework-dependent; it is
+   plain JavaScript + Chart.js for the charts.

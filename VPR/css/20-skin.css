@@ -1,0 +1,959 @@
+/* ══════════════════════════════════════════════════════════════════════
+   SKIN — merged (site office / calibration)
+   ------------------------------------------------------------------------
+   Was two independently-<link>-ed stylesheets (20-skin-site-office.css
+   loaded, then 40-skin-chassis.css loaded after it) that BOTH redefined
+   :root and [data-theme="dark"]. That's the exact pattern that already
+   caused one documented bug (see the CALIBRATION section's dark-mode note,
+   carried over below): whichever file redeclares a token last wins, which
+   one that is depends on <link> order in vendor_rating.html rather than
+   being visible in either file, and chassis's OWN [data-theme="dark"]
+   block was itself declared twice further down (a second, narrower block
+   silently shadowed several values from the first — --bg, --acc, and others
+   were live at different hex values than the block you'd read first).
+
+   Merged into one file so there is exactly one :root and one
+   [data-theme="dark"] to edit. TOKENS below is the fully resolved output —
+   for every custom property, whichever value was cascade-winning across
+   the old three token blocks (site-office root/dark, chassis root, and
+   BOTH chassis dark blocks, applied in that original order) is what's kept.
+   Verified byte-for-byte against the old three-block cascade via computed-
+   style snapshots (script + fixture kept alongside this file's history).
+
+   Component-level rules below TOKENS are the two original files'
+   *remaining* content (everything except their token blocks), concatenated
+   in their original relative order — site-office's rules first, chassis's
+   second — which reproduces today's cascade exactly for any selector both
+   files touch (.pt, .pn, #topbar .nav, .kpi-val, .pill, tables, …): same
+   specificity relationships, same source order, same winner. That
+   duplication (two rulesets for the same selectors) is NOT pruned in this
+   pass — collapsing it means confirming a winner for every comma-grouped
+   selector by hand, which is real regression risk for a change whose only
+   goal was an identical rendered result. Flagged as a follow-up, not done
+   silently here.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ---- TOKENS (merged, single source of truth) --------------------------- */
+:root {
+  --white: #ffffff;
+  --bg: #eef1f4;
+  --s1: #ffffff;
+  --s2: #f7f9fb;
+  --s3: #e7ecf1;
+  --s4: #d3dbe3;
+  --s5: #b3bec9;
+  --brd: #dde3ea;
+  --brd2: #c2ccd6;
+  --brd3: #8593a1;
+  --navy: #1b2027;
+  --navy2: #272e37;
+  --navy3: #4a5560;
+  --acc: #1f6feb;
+  --acc-lt: #e8f0fe;
+  --acc-brd: #b6d0f7;
+  --acc2: #1550b3;
+  --cyan: #0e7490;
+  --gold: #c2701a;
+  --gold-deep: #8f4f0d;
+  --gold-lt: #fdf1e3;
+  --grn: #1a7f4b;
+  --grn-lt: #e6f4ec;
+  --grn-brd: #a8d6bd;
+  --amb: #8a6410;
+  --amb-lt: #faf2df;
+  --amb-brd: #e0cb95;
+  --red: #b3291d;
+  --red-lt: #fbe9e6;
+  --red-brd: #e6aca4;
+  --pur: #155e75;
+  --pur-lt: #e2eff3;
+  --pur-brd: #a5c9d6;
+  --txt: #151a20;
+  --t2: #39434e;
+  --t3: #6b7885;
+  --t4: #64778c;
+  --fn: 'Archivo', 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --hd: 'Barlow Condensed', 'Archivo', sans-serif;
+  --mono: 'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  --top: 60px;
+  --r: 4px;
+  --r-lg: 8px;
+  --shadow-xs: 0 1px 0 rgba(11,21,36,.05), 0 1px 2px rgba(11,21,36,.05);
+  --shadow-sm: 0 1px 0 rgba(11,21,36,.05), 0 4px 12px -4px rgba(11,21,36,.10);
+  --shadow-md: 0 2px 0 rgba(11,21,36,.04), 0 14px 30px -14px rgba(11,21,36,.20);
+  --shadow-lg: 0 24px 56px -20px rgba(11,21,36,.32);
+  --ink-bg: #0b1524;
+  --ink-fg: #f2f6fa;
+  --ease-out: cubic-bezier(.22,.9,.3,1);
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --t-fast: .14s;
+  --t-med: .26s;
+  --t-slow: .45s;
+  --btn-solid-bg: #1b2027;
+  --btn-solid-fg: #ffffff;
+}
+
+[data-theme="dark"] {
+  --white: #151a21;
+  --bg: #12161b;
+  --s1: #1a1f26;
+  --s2: #1e242b;
+  --s3: #252c34;
+  --s4: #333c46;
+  --s5: #3d4855;
+  --brd: #2b333c;
+  --brd2: #3a444f;
+  --brd3: #5a6878;
+  --navy: #eef3f9;
+  --navy2: #d4dde7;
+  --navy3: #aab8c6;
+  --acc: #5c9bff;
+  --acc-lt: #16233a;
+  --acc-brd: #2d4a7a;
+  --acc2: #7fb2fa;
+  --cyan: #38a8c4;
+  --gold: #e39445;
+  --gold-deep: #c2701a;
+  --gold-lt: #2a1f12;
+  --grn: #4cc38a;
+  --grn-lt: #12241b;
+  --grn-brd: #2c5a42;
+  --amb: #d6a53c;
+  --amb-lt: #241d10;
+  --amb-brd: #5a4a22;
+  --red: #f2705f;
+  --red-lt: #2a1512;
+  --red-brd: #5e2c25;
+  --pur: #4fa8c4;
+  --pur-lt: #122630;
+  --pur-brd: #2b5666;
+  --txt: #e8edf2;
+  --t2: #c0cad4;
+  --t3: #8a97a4;
+  --t4: #75889b;
+  --ink-bg: #0b1524;
+  --ink-fg: #f2f6fa;
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.35);
+  --shadow-sm: 0 3px 10px -3px rgba(0,0,0,.45);
+  --shadow-md: 0 12px 28px -12px rgba(0,0,0,.55);
+  --shadow-lg: 0 26px 60px -18px rgba(0,0,0,.7);
+  --btn-solid-bg: #2b3644;
+  --btn-solid-fg: #f2f6fa;
+}
+
+/* ---- COMPONENT RULES — from 20-skin-site-office.css, original order ---- */
+/* ════════════════════════════════════════════════════════════════════
+   SKIN v2 — "SITE OFFICE"
+   A procurement control tower drawn like an engineering site office:
+   one permanent ink command-band up top (millimetre-grid, marigold
+   survey ticks), and below it a disciplined instrument surface —
+   squared corners, hairline double rules, condensed drafting numerals.
+   This layer only overrides tokens + component chrome. Logic untouched.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── 1 · TOKENS ────────────────────────────────────────────────────── */
+
+
+
+
+/* ── 2 · GROUND — drafted millimetre floor ─────────────────────────── */
+body {
+  font-family: var(--fn);
+  font-size: 13.5px;
+  letter-spacing: .1px;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(900px 320px at 18% -60px, var(--acc-lt), transparent 70%);
+  background-size: auto;
+  background-attachment: fixed;
+}
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(900px 320px at 18% -60px, rgba(78,163,240,.10), transparent 70%);
+}
+
+::selection { background: var(--gold); color: #0b1524; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-thumb { background: var(--s5); border: 3px solid var(--bg); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brd3); }
+
+:where(button, [onclick], .nav, .upzone):focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* ── 3 · SIGNATURE — the ink command band ──────────────────────────── */
+#topbar,
+[data-theme="dark"] #topbar {
+  /* Component-scoped tokens: everything inside the band (nav tabs,
+     scope switch, inline-styled buttons) re-reads these values. */
+  --s1: rgba(255,255,255,.05);
+  --s2: rgba(255,255,255,.09);
+  --white: rgba(255,255,255,.07);
+  --txt:  #e9eff6;
+  --navy: #ffffff;
+  --t2:  #aebfd0;
+  --t3:  #7e93a9;
+  --t4:  #5b7189;
+  --brd:  rgba(255,255,255,.10);
+  --brd2: rgba(255,255,255,.18);
+  --brd3: rgba(255,255,255,.36);
+  --acc:     #003d73;
+  --acc-lt:  rgba(88,166,238,.16);
+  --acc-brd: rgba(88,166,238,.42);
+
+  height: var(--top);
+  background: linear-gradient(180deg, #14588f 0%, #0d4b81 55%, #073a68 100%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 10px 30px -18px rgba(3,42,78,.6);
+}
+#topbar::after {
+  /* quiet baseline with a small brand accent mark */
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background:
+    linear-gradient(90deg, var(--gold) 0 64px, transparent 64px),
+    rgba(255,255,255,.08);
+  pointer-events: none;
+}
+
+.tnav-area { display: flex; align-items: stretch; height: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tnav-area::-webkit-scrollbar { display: none; }
+
+#topbar .sbl {
+  border-left: 1px solid rgba(255,255,255,.14);
+  color: #6d839b;
+  font-size: 9px;
+  letter-spacing: 2.4px;
+  padding: 2px 14px 2px 18px;
+}
+#topbar .sbl:first-child { border-left: none; padding-left: 4px; margin-left: 0; }
+
+#topbar .nav {
+  height: 100%;
+  padding: 0 16px;
+  font-family: var(--hd);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: #aebfd0;
+  border-radius: 0;
+  position: relative;
+}
+#topbar .nav .nav-ic { width: 15px; height: 15px; opacity: .75; }
+#topbar .nav:hover { background: rgba(255,255,255,.06); color: #fff; }
+#topbar .nav.on { color: #fff; background: rgba(63,149,232,.10); }
+#topbar .nav.on::before {
+  content: '';
+  position: absolute; top: 0; left: 12px; right: 12px; height: 3px;
+  background: var(--gold);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 3px) 100%, 3px 100%);
+}
+#topbar .nav.on .nav-ic { opacity: 1; stroke: var(--gold); }
+#topbar .nav .nbadge { background: var(--gold); color: #0b1524; border-radius: 2px; }
+
+/* highlight pill for the four secondary nav tabs (Vendor Scorecard, Completeness,
+   Team Workload, Vendor Focus) so they stay visually distinct now that the
+   "Overview"/"Analysis" section labels have been removed */
+#topbar .nav.nav-hl {
+  margin: 0 2px;
+  border-radius: var(--r);
+  background: rgba(217,142,4,.14);
+  color: #f4dfae;
+}
+#topbar .nav.nav-hl:hover { background: rgba(217,142,4,.24); color: #fff; }
+#topbar .nav.nav-hl.on { background: rgba(217,142,4,.30); color: #fff; }
+[data-theme="light"] #topbar .nav.nav-hl { background: rgba(255,255,255,.16); color: #fff; }
+[data-theme="light"] #topbar .nav.nav-hl:hover { background: rgba(255,255,255,.26); color: #fff; }
+/* Active highlighted tab: at 55% alpha the gold blended with the old grey bar
+   and left white text at ~2.7:1. Use a deeper, more opaque amber so the label
+   clears 4.5:1 against the blue chassis. */
+[data-theme="light"] #topbar .nav.nav-hl.on { background: rgba(138,79,10,.92); color: #fff; }
+
+.logo-t { color: #fff; }
+.logo-s { color: var(--gold); }
+.tsep { background: rgba(255,255,255,.16); }
+.tdate { color: #7e93a9; font-family: var(--mono); font-size: 11.5px; }
+
+#topbar-hsel { border-radius: 3px !important; border-color: rgba(255,255,255,.22) !important; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+#topbar-hsel button { font-family: var(--hd) !important; letter-spacing: 1.2px; text-transform: uppercase; }
+
+#topbar .btn-exp {
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,.24);
+  background: rgba(255,255,255,.05);
+  color: #e9eff6;
+  font-family: var(--hd);
+  font-size: 12.5px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+#topbar .btn-exp:hover { background: var(--gold); border-color: var(--gold); color: #0b1524; box-shadow: 0 6px 18px -8px rgba(217,142,4,.7); }
+#topbar .theme-toggle { border-radius: 3px; background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.2); color: #aebfd0; }
+#topbar .theme-toggle:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+/* ── LIGHT MODE — the topbar reads as clean drafting paper ─────────── */
+[data-theme="light"] #topbar {
+  --s1: rgba(255,255,255,.08);
+  --s2: rgba(255,255,255,.12);
+  --white: rgba(255,255,255,.10);
+  --txt:  #eaf3ff;
+  --navy: #ffffff;
+  --t2:  #d5e7fa;
+  --t3:  #aecdec;
+  --t4:  #86b3e0;
+  --brd:  rgba(255,255,255,.16);
+  --brd2: rgba(255,255,255,.24);
+  --brd3: rgba(255,255,255,.40);
+  --acc:     #00335c;
+  --acc-lt:  rgba(255,255,255,.14);
+  --acc-brd: rgba(255,255,255,.4);
+
+  background: linear-gradient(180deg, #14588f 0%, #0d4b81 55%, #073a68 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.10) inset, 0 6px 20px -14px rgba(3,42,78,.45);
+}
+[data-theme="light"] #topbar::after {
+  background:
+    linear-gradient(90deg, var(--gold-deep, #d98e04) 0 64px, transparent 64px),
+    rgba(255,255,255,.10);
+}
+[data-theme="light"] #topbar .sbl { border-left-color: rgba(255,255,255,.26); color: #aecdec; }
+[data-theme="light"] #topbar .nav { color: #d5e7fa; }
+[data-theme="light"] #topbar .nav:hover { background: rgba(255,255,255,.10); color: #fff; }
+[data-theme="light"] #topbar .nav.on { color: #fff; background: rgba(255,255,255,.16); }
+[data-theme="light"] #topbar .nav.on::before { background: var(--gold-deep, #d98e04); }
+[data-theme="light"] #topbar .nav.on .nav-ic { stroke: var(--gold-deep, #d98e04); }
+[data-theme="light"] .logo-t { color: #ffffff; }
+/* The topbar is now blue (was grey/silver). The deep gold used for the logo
+   subtitle only cleared contrast against the old grey chassis — on blue it
+   drops to ~1.8:1. Use the lighter gold, which reads on both. */
+[data-theme="light"] .logo-s { color: var(--gold, #e0913c); }
+[data-theme="light"] .tsep { background: rgba(255,255,255,.28); }
+[data-theme="light"] .tdate { color: #d5e7fa; }
+[data-theme="light"] #topbar-hsel { border-color: rgba(255,255,255,.32) !important; box-shadow: none; }
+[data-theme="light"] #topbar .btn-exp {
+  border: 1px solid rgba(255,255,255,.32);
+  background: rgba(255,255,255,.08);
+  color: #ffffff;
+}
+[data-theme="light"] #topbar .btn-exp:hover {
+  background: var(--gold-deep, #d98e04); border-color: var(--gold-deep, #d98e04);
+  color: #ffffff; box-shadow: 0 6px 18px -8px rgba(217,142,4,.55);
+}
+[data-theme="light"] #topbar .theme-toggle {
+  background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.32); color: #eaf3ff;
+}
+[data-theme="light"] #topbar .theme-toggle:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+#navToggle { border-radius: 3px; }
+
+/* ── 4 · LANDING — the drawing sheet ───────────────────────────────── */
+#upscreen { position: relative; }
+.ls-title {
+  font-family: var(--fn);
+  font-size: clamp(28px, 3.6vw, 44px);
+  font-weight: 900;
+  letter-spacing: -1.2px;
+  line-height: 1.02;
+  text-transform: uppercase;
+  color: var(--navy);
+  margin: 0 0 48px;
+}
+.ls-title em {
+  color: var(--acc);
+  position: relative;
+  display: inline-block;
+}
+.ls-title em::after {
+  content: '';
+  position: absolute; left: 2px; right: 2px; bottom: .04em; height: .10em;
+  background: repeating-linear-gradient(-55deg, var(--gold) 0 7px, transparent 7px 13px);
+  opacity: .9;
+}
+.ls-eyebrow {
+  border-radius: 2px;
+  border: 1px solid var(--brd2);
+  background: var(--s1);
+  color: var(--t3);
+  font-size: 10px;
+  letter-spacing: 2.6px;
+}
+.ls-eyebrow i { background: var(--gold); border-radius: 0; width: 7px; height: 7px; }
+
+.upzone {
+  border-radius: var(--r-lg);
+  border: 1px solid var(--brd2);
+  outline: 1.5px dashed var(--brd2);
+  outline-offset: -10px;
+  background: var(--s1);
+  box-shadow: var(--shadow-md);
+  transition: outline-color .18s, border-color .18s, box-shadow .18s, transform .18s;
+}
+.upzone::before, .upzone::after {
+  content: '' !important;
+  position: absolute;
+  width: 22px; height: 22px;
+  border: 2px solid var(--gold);
+  transition: width .18s, height .18s, border-color .18s;
+  pointer-events: none;
+}
+.upzone::before { top: -1px; left: -1px; border-right: none; border-bottom: none; border-top-left-radius: var(--r-lg); }
+.upzone::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; border-bottom-right-radius: var(--r-lg); }
+.upzone:hover, .upzone.drag {
+  border-color: var(--acc-brd);
+  outline-color: var(--acc);
+  background: var(--s1);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+.upzone:hover::before, .upzone:hover::after,
+.upzone.drag::before, .upzone.drag::after { width: 40px; height: 40px; }
+.up-icon {
+  border-radius: 3px;
+  border: 1px solid var(--acc-brd);
+  background: linear-gradient(160deg, var(--acc-lt), transparent);
+  color: var(--acc);
+}
+.up-title { font-family: var(--fn); font-weight: 800; letter-spacing: -.4px; }
+.ls-formats span, .ls-feature { border-radius: 2px; font-family: var(--mono); }
+.ls-hint { font-family: var(--mono); font-size: 10.5px; letter-spacing: .4px; color: var(--t4); }
+.ls-rule { border-radius: 0; background: linear-gradient(90deg, var(--acc) 0 70%, var(--gold) 70%); }
+
+/* ── 5 · CONTENT CHROME ────────────────────────────────────────────── */
+/* Top padding is deliberately small: the KPI cards sit directly under the
+   header band. See the #layout note above for the 60px that used to sit here. */
+#main { padding: 12px 34px 80px; gap: 24px; }
+
+.stitle {
+  font-family: var(--fn);
+  font-weight: 800;
+  letter-spacing: -.8px;
+  font-size: 28px;
+}
+.stitle::before {
+  width: 14px; height: 14px;
+  border-radius: 0;
+  background: transparent;
+  border: 3px solid var(--gold);
+  border-right: none; border-bottom: none;
+  transform: translateY(-4px);
+}
+
+.ch, .pill, .tchip, .rbdg { border-radius: 2px; }
+.ch { font-family: var(--mono); font-size: 11.5px; letter-spacing: .3px; }
+
+.btn1, .pgb, .sinp, select.sel { border-radius: 3px; }
+.btn1 {
+  background: var(--ink-bg);
+  border: 1px solid var(--ink-bg);
+  color: var(--ink-fg);
+  font-family: var(--hd);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+  box-shadow: var(--shadow-sm);
+}
+.btn1:hover { background: var(--acc); border-color: var(--acc); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn1:active { transform: translateY(0); }
+
+.sinp:focus, select.sel:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-lt); }
+
+/* ── 6 · KPI — registration-marked meters ──────────────────────────── */
+.kg { gap: 12px; }
+.kpi {
+  border-radius: var(--r);
+  border: 1px solid var(--brd);
+  box-shadow: var(--shadow-xs);
+  padding: 16px 18px 14px;
+}
+.kpi::before {
+  /* drafting registration bracket, top-left */
+  left: 0; top: 0;
+  width: 16px; height: 16px;
+  border-radius: 0;
+  background: transparent !important;
+  border-top: 2px solid var(--s5);
+  border-left: 2px solid var(--s5);
+  transition: border-color .15s, width .15s, height .15s;
+}
+.kpi::after {
+  content: '';
+  position: absolute; right: 0; bottom: 0;
+  width: 16px; height: 16px;
+  border-bottom: 2px solid var(--s4);
+  border-right: 2px solid var(--s4);
+  transition: border-color .15s;
+  pointer-events: none;
+}
+.kpi:hover { border-color: var(--brd2); }
+.kpi.click:hover, .kpi-click:hover { border-color: var(--acc-brd); transform: translateY(-2px); }
+.kpi.click:hover::before, .kpi-click:hover::before { border-color: var(--gold); width: 24px; height: 24px; }
+.kpi.click:hover::after,  .kpi-click:hover::after  { border-color: var(--gold); }
+.kl { font-size: 10.5px; letter-spacing: 1.8px; color: var(--t3); }
+.kv { font-family: var(--hd); font-weight: 700; font-size: 40px; letter-spacing: 0; }
+.ks { font-family: var(--mono); font-size: 10.5px; color: var(--t4); }
+.kb { border-radius: 0; height: 5px; }
+.kbf { border-radius: 0; }
+
+/* ── 7 · PANELS + TABLES — engineering ledger ──────────────────────── */
+.pn {
+  border-radius: var(--r);
+  border: 1px solid var(--brd);
+  box-shadow: var(--shadow-xs);
+  content-visibility: auto;                 /* native lazy rendering */
+  contain-intrinsic-size: auto 340px;
+}
+.pn:has(canvas) { content-visibility: visible; }   /* never skip live charts */
+.phd { border-bottom: 2px solid var(--navy); padding: 13px 18px 11px; }
+[data-theme="dark"] .phd { border-bottom-color: var(--brd2); }
+.pt { font-family: var(--fn); font-weight: 800; font-size: 17.5px; letter-spacing: -.3px; }
+.pt::before {
+  width: 9px; height: 9px;
+  border-radius: 0;
+  background: var(--gold);
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+table.dt { font-size: 13.5px; }
+table.dt th {
+  font-family: var(--hd);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--brd2);
+  box-shadow: 0 -2px 0 var(--navy) inset;
+}
+[data-theme="dark"] table.dt th { box-shadow: 0 -2px 0 var(--brd3) inset; }
+table.dt td { font-variant-numeric: tabular-nums; }
+table.dt tbody tr { transition: background .1s; }
+table.dt tr:hover td { background: var(--acc-lt); box-shadow: 2px 0 0 var(--acc) inset; }
+table.dt tr:hover td ~ td { box-shadow: none; }
+.num, .mono, .pgi { font-family: var(--mono); }
+
+/* ── 8 · RATING STARS → marigold survey tape ───────────────────────── */
+svg[id^="star_"] { transition: fill .15s, stroke .15s, transform .12s; }
+svg[id^="star_"]:hover { transform: scale(1.18); }
+svg[id^="star_"][fill="#0072bc"] { fill: var(--gold) !important; stroke: var(--gold-deep) !important; }
+svg[id^="star_"][stroke="#0072bc"] { stroke: var(--gold-deep) !important; }
+svg[id^="star_"][fill="#0072bc"] polygon { filter: drop-shadow(0 1px 2px rgba(217,142,4,.45)); }
+
+/* ── 9 · FEEDBACK — toast + modals ─────────────────────────────────── */
+#toast {
+  border-radius: 3px !important;
+  background: var(--ink-bg) !important;
+  color: var(--ink-fg) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-left: 4px solid var(--gold) !important;
+  font-family: var(--mono) !important;
+  font-size: 12px !important;
+  letter-spacing: .3px;
+  box-shadow: var(--shadow-lg) !important;
+}
+#toast.ok  { border-left-color: var(--grn) !important; }
+#toast.err { border-left-color: var(--red) !important; }
+.dbg-panel { border-radius: var(--r-lg); border: 1px solid var(--brd2); box-shadow: var(--shadow-lg); }
+
+.empty { font-family: var(--mono); letter-spacing: .3px; }
+
+/* ── 10 · MOTION — quiet, then off when asked ──────────────────────── */
+@keyframes sv2-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+.sv2-pre { opacity: 0; }
+.sv2-in  { animation: sv2-rise .5s cubic-bezier(.22,.9,.3,1) both; }
+#main.vswap { animation: sv2-rise .35s cubic-bezier(.22,.9,.3,1) both; }
+
+/* ── 10b · MOTION LAYER v3 ─────────────────────────────────────────────
+   Timing tokens keep every transition on the same curve so the interface
+   feels like one instrument rather than a pile of separate widgets.      */
+
+
+/* Panels lift on hover — the whole surface reacts, not just the border. */
+.pn{ transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out), border-color var(--t-med) var(--ease-out); }
+.pn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.phd-click{ position:relative; overflow:hidden; }
+.phd-click::after{
+  content:''; position:absolute; left:0; right:0; bottom:0; height:2px;
+  background:linear-gradient(90deg, var(--acc), var(--gold));
+  transform:scaleX(0); transform-origin:left; transition:transform var(--t-med) var(--ease-out);
+}
+.phd-click:hover::after{ transform:scaleX(1); }
+
+/* KPI / stat tiles: a soft sheen sweeps across on hover. */
+.vpd-stat, .cdd-kpi{ position:relative; overflow:hidden;
+  transition: transform var(--t-med) var(--ease-out), box-shadow var(--t-med) var(--ease-out), border-color var(--t-med) var(--ease-out); }
+.vpd-stat::before, .cdd-kpi::before{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.55) 50%, transparent 62%);
+  transform:translateX(-130%); transition:transform .65s var(--ease-out);
+}
+.vpd-stat:hover::before, .cdd-kpi:hover::before{ transform:translateX(130%); }
+.vpd-stat:hover, .cdd-kpi:hover{ transform:translateY(-3px); box-shadow:var(--shadow-md); }
+[data-theme="dark"] .vpd-stat::before, [data-theme="dark"] .cdd-kpi::before{
+  background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.12) 50%, transparent 62%);
+}
+
+/* Progress / score bars grow from the left on first paint. */
+@keyframes sv2-grow{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+.prf, .vpd-pbar .fill, .kbf, .tbf{ transform-origin:left center; animation:sv2-grow .8s var(--ease-out) both; }
+
+/* Table rows: a marigold rail slides in on hover. */
+.dt tbody tr{ transition: background var(--t-fast) linear; }
+.dt tbody tr td:first-child{ position:relative; }
+.dt tbody tr td:first-child::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:var(--gold); transform:scaleY(0); transition:transform var(--t-fast) var(--ease-out);
+}
+.dt tbody tr:hover td:first-child::before{ transform:scaleY(1); }
+
+/* Nav tabs get an underline that wipes in from the left. */
+#topbar .nav::after{
+  content:''; position:absolute; left:12px; right:12px; bottom:0; height:2px;
+  background:var(--acc); transform:scaleX(0); transform-origin:left;
+  transition:transform var(--t-med) var(--ease-out);
+}
+#topbar .nav:hover::after{ transform:scaleX(1); }
+#topbar .nav.on::after{ transform:scaleX(0); }
+
+/* Buttons: press feedback + a lift on hover. */
+.btn-exp, .btn1, .theme-toggle{ transition: transform var(--t-fast) var(--ease-out), background var(--t-fast) linear, border-color var(--t-fast) linear, box-shadow var(--t-fast) var(--ease-out); }
+.btn-exp:hover, .btn1:hover{ transform:translateY(-1px); }
+.btn-exp:active, .btn1:active, .theme-toggle:active{ transform:translateY(1px) scale(.98); }
+.theme-toggle svg{ transition:transform var(--t-slow) var(--ease-spring); }
+.theme-toggle:hover svg{ transform:rotate(20deg) scale(1.1); }
+
+/* The landing title settles in, word by word. */
+@keyframes sv2-title{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+.ls-title{ animation:sv2-title .7s var(--ease-out) both; }
+.ls-title em{ animation:sv2-title .7s .12s var(--ease-out) both; }
+
+/* Upload dropzone breathes while idle so it reads as the primary action. */
+@keyframes sv2-breathe{ 0%,100%{ box-shadow:0 0 0 0 var(--acc-lt); } 50%{ box-shadow:0 0 0 10px transparent; } }
+.upzone{ transition: border-color var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out), background var(--t-med) linear; }
+.upzone:not(.drag){ animation:sv2-breathe 3.4s ease-in-out infinite; }
+.upzone:hover{ transform:translateY(-2px); }
+
+/* Toast slides up rather than appearing. */
+@keyframes sv2-toast{ from{ opacity:0; transform:translateY(14px) scale(.97); } to{ opacity:1; transform:none; } }
+#toast.show{ animation:sv2-toast .3s var(--ease-spring) both; }
+
+/* Skeleton shimmer for anything awaiting data. */
+@keyframes sv2-shim{ from{ background-position:-260px 0; } to{ background-position:260px 0; } }
+.sv2-skel{ background:linear-gradient(90deg,var(--s3) 0%,var(--s2) 50%,var(--s3) 100%);
+  background-size:520px 100%; animation:sv2-shim 1.15s linear infinite; border-radius:2px; color:transparent!important; }
+
+/* Nav-row chevrons in drill-downs nudge right (defined with the card CSS). */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  .sv2-pre { opacity: 1; }
+  .pn:hover, .vpd-stat:hover, .cdd-kpi:hover, .btn-exp:hover, .btn1:hover, .upzone:hover { transform:none; }
+}
+
+/* ── 11 · SMALL SCREENS + PRINT ────────────────────────────────────── */
+@media (max-width: 860px) {
+  .ls-title { letter-spacing: -1.2px; }
+  #main { padding: 10px 16px 64px; }
+  #topbar .nav { padding: 0 12px; font-size: 12.5px; letter-spacing: 1.2px; }
+}
+@media print {
+  body { background: #fff !important; background-image: none !important; }
+  #topbar { display: none !important; }
+  #bg-fx { display: none !important; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   AMBIENT BACKGROUND
+   A fixed layer behind all content: a slow blueprint-grid drift plus
+   three drifting colour blooms. Purely decorative.
+
+   Why CSS-only and not canvas/JS: this dashboard paints large tables,
+   and a rAF loop would compete with scrolling. Transform/opacity
+   animations stay on the compositor and cost effectively nothing.
+
+   pointer-events:none so it never intercepts clicks; z-index:0 with
+   #topbar/#main lifted to 1 so it always sits behind.
+   ══════════════════════════════════════════════════════════════════ */
+#bg-fx{
+  position:fixed; inset:0; z-index:0;
+  pointer-events:none; overflow:hidden;
+  contain:strict;   /* isolate from page layout/paint */
+}
+#bg-fx .blob{
+  position:absolute; border-radius:50%;
+  filter:blur(60px); opacity:.55;
+  will-change:transform;
+}
+#bg-fx .b1{ width:560px; height:560px; top:-150px;  left:-90px;
+  background:var(--acc);  animation:bgFloat1 34s ease-in-out infinite; }
+#bg-fx .b2{ width:500px; height:500px; top:30%; right:-140px;
+  background:var(--cyan); animation:bgFloat2 42s ease-in-out infinite; }
+#bg-fx .b3{ width:440px; height:440px; bottom:-160px; left:36%;
+  background:var(--gold); animation:bgFloat3 38s ease-in-out infinite; opacity:.32; }
+
+@keyframes bgFloat1{
+  0%,100%{ transform:translate3d(0,0,0)      scale(1);   }
+  50%    { transform:translate3d(90px,60px,0) scale(1.14); }
+}
+@keyframes bgFloat2{
+  0%,100%{ transform:translate3d(0,0,0)        scale(1);   }
+  50%    { transform:translate3d(-110px,-70px,0) scale(1.18); }
+}
+@keyframes bgFloat3{
+  0%,100%{ transform:translate3d(0,0,0)       scale(1);   }
+  50%    { transform:translate3d(60px,-90px,0) scale(1.1); }
+}
+
+/* Dark theme: blooms glow a little harder, grid recedes. */
+[data-theme="dark"] #bg-fx .grid{ opacity:.30; }
+[data-theme="dark"] #bg-fx .blob{ opacity:.24; }
+[data-theme="dark"] #bg-fx .b3{ opacity:.14; }
+
+/* Keep content above the layer. */
+#topbar{ position:relative; z-index:2; }
+#main{ position:relative; z-index:1; }
+
+/* Respect the OS setting: hold the composition still, don't remove it. */
+@media (prefers-reduced-motion: reduce){
+  #bg-fx .grid, #bg-fx .blob{ animation:none !important; }
+}
+
+/* ---- COMPONENT RULES — from 40-skin-chassis.css, original order -------- */
+/* ══════════════════════════════════════════════════════════════════════
+   SKIN v6 — "CALIBRATION"
+   Vendor rating is measurement, so the surface reads as a precision
+   instrument rather than a paper drawing: graphite chassis, cool slate
+   field, one amber index mark for the needle.
+   Signature: the calibration rule — a tick-marked band under the active
+   nav item, ticked at the same 1–5 interval the dashboard measures.
+   Token + chrome overrides only. No logic touched.
+   ══════════════════════════════════════════════════════════════════════ */
+
+
+/* ── SKIN v6 · DARK ──────────────────────────────────────────────────
+   The :root block above redefines the whole palette for skin v6, but it
+   originally shipped with no dark counterpart — so switching to dark mode
+   left these light-mode tokens in place and text such as .ls-title /
+   .up-title (color:var(--navy) = #1b2027) rendered near-black on a dark
+   field, effectively invisible. This mirrors every token above for dark.
+   Same variable names, inverted ramp: surfaces darken, ink lightens. */
+
+
+/* Dark-mode contrast corrections.
+   Several colours are written as literals in inline styles (generated in JS),
+   so they can't follow the token ramp. These rules lift the ones that render
+   as TEXT on a dark surface. Fills/bars keep their original hue — they sit on
+   light chips and read fine. Selected via attribute match on the literal. */
+[data-theme="dark"] [style*="#a82f1c"]{ color:#f2705f !important; }
+[data-theme="dark"] [style*="#3f6d2c"]{ color:#5fbf7a !important; }
+[data-theme="dark"] [style*="#8a7d17"]{ color:#d6b93c !important; }
+[data-theme="dark"] [style*="#c07a1e"]{ color:#e0a04a !important; }
+[data-theme="dark"] [style*="#1e7d34"]{ color:#4cc38a !important; }
+[data-theme="dark"] [style*="#4f9d3a"]{ color:#6fcf6a !important; }
+[data-theme="dark"] [style*="#b58a1b"]{ color:#e0b53c !important; }
+[data-theme="dark"] [style*="#5f6b75"]{ color:#aab8c6 !important; }
+[data-theme="dark"] [style*="#a0592c"]{ color:#d08a5a !important; }
+[data-theme="dark"] [style*="#33383d"]{ color:#c3cedb !important; }
+/* Progress/'fill' spans inside those elements must NOT be re-coloured. */
+[data-theme="dark"] [style*="#a82f1c"] > [style*="background"],
+[data-theme="dark"] [style*="#3f6d2c"] > [style*="background"]{ color:inherit !important; }
+
+/* Active/selected chips and accent-filled buttons are written inline as
+   background:var(--acc) with #fff text (half-year switch, per-view scope
+   switch, Email Vendor). In dark mode --acc (#5c9bff) is too light to carry
+   white text (~2.8:1), so darken the fill. Both the plain var(--acc) and the
+   var(--acc,#0072bc) fallback form appear in the file. !important is needed
+   to beat the inline style. */
+[data-theme="dark"] button[style*="background:var(--acc)"],
+[data-theme="dark"] button[style*="background:var(--acc,"],
+[data-theme="dark"] [style*="background:var(--acc);color:#fff"]{
+  background:#1d4ed8 !important;
+  border-color:#1d4ed8 !important;
+}
+
+body{
+  background:var(--bg);
+  color:var(--txt);
+  -webkit-font-smoothing:antialiased;
+  letter-spacing:-.005em;
+}
+/* Tabular numerals: the single most useful type decision on a ratings
+   dashboard — score columns align optically. */
+.tw table, td, th, .kpi-val{
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+}
+
+/* ── SIGNATURE · calibration rule ────────────────────────────────────
+   A tick-marked band under the active tab, ticked at the same interval
+   the dashboard measures. Selectors carry #topbar to outrank the
+   underline-wipe rule defined earlier in skin-v2. */
+#topbar .nav{ position:relative; border-radius:2px; }
+#topbar .nav.on{ background:rgba(255,255,255,.07); }
+#topbar .nav::after{
+  content:"";
+  position:absolute; left:10px; right:10px; bottom:0;
+  height:6px;
+  background-image:
+    repeating-linear-gradient(90deg,var(--gold) 0 1px,transparent 1px 5px),
+    repeating-linear-gradient(90deg,var(--gold-deep) 0 1.5px,transparent 1.5px 25px);
+  background-size:100% 3px,100% 6px;
+  background-position:0 100%,0 100%;
+  background-repeat:repeat-x;
+  transform:scaleX(0);
+  transform-origin:left;
+  transition:transform .22s cubic-bezier(.22,.9,.3,1);
+  opacity:.95;
+  pointer-events:none;
+}
+#topbar .nav:hover::after{ transform:scaleX(.4); }
+#topbar .nav.on::after{ transform:scaleX(1); }
+
+/* ── Chassis: graphite band, amber index line ──────────────────────── */
+#topbar{
+  /* Blue band. Set explicitly rather than via --navy, because --navy is also
+     the heading ink colour used throughout the page. */
+  background:linear-gradient(180deg,#123a6b 0%,#0d2b52 100%) !important;
+  border-bottom:2px solid var(--gold) !important;
+  box-shadow:0 1px 0 rgba(0,0,0,.4);
+}
+
+/* ── KPI numerals: the instrument readout ──────────────────────────── */
+.kpi-val,.kv,.kpi .val{
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em;
+  font-weight:680;
+}
+/* Eyebrow labels read as instrument legends, not headings. */
+.kpi-lbl,.kl,.kpi .lbl{
+  font-size:9.5px !important;
+  letter-spacing:.14em !important;
+  text-transform:uppercase;
+  color:var(--t3);
+  font-weight:640;
+}
+
+/* ── Panel headers get a hairline + generous letterspacing ─────────── */
+.pn .ph,.pn h3,.pt{
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  font-size:10.5px;
+  color:var(--t3);
+  font-weight:650;
+}
+
+/* ── Panels: instrument bezels ─────────────────────────────────────── */
+.pn{
+  background:var(--s1);
+  border:1px solid var(--brd);
+  border-radius:3px;
+  box-shadow:0 1px 2px rgba(21,26,32,.05);
+}
+
+/* ── Tables: dense, legible, quiet ─────────────────────────────────── */
+.tw thead th{
+  background:var(--s3);
+  color:var(--t2);
+  font-size:10.5px;
+  letter-spacing:.075em;
+  text-transform:uppercase;
+  font-weight:650;
+  padding:8px 10px;
+  border-bottom:1px solid var(--brd2);
+}
+.tw tbody td{
+  padding:7px 10px;
+  font-size:12.5px;
+  border-bottom:1px solid var(--s3);
+  color:var(--t2);
+}
+.tw tbody tr:nth-child(even) td{ background:var(--s2); }
+.tw tbody tr:hover td{
+  background:var(--acc-lt);
+  box-shadow:inset 2px 0 0 var(--acc);
+}
+
+/* ── Pills: flat, bordered, no gloss ───────────────────────────────── */
+.pill{
+  border-radius:2px;
+  padding:2px 7px;
+  font-size:10.5px;
+  font-weight:650;
+  letter-spacing:.03em;
+  border:1px solid currentColor;
+}
+
+/* ── Focus: always visible ─────────────────────────────────────────── */
+:where(a,button,input,select,[tabindex]):focus-visible{
+  outline:2px solid var(--acc);
+  outline-offset:2px;
+}
+
+/* ── View swap: a short settle, like a needle coming to rest ───────── */
+@keyframes vswap-in{ from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+#main.vswap{ animation:vswap-in .16s cubic-bezier(.22,.9,.3,1) both; }
+
+@media (max-width:860px){
+  .tw{ overflow-x:auto; }
+  .tw table{ min-width:640px; }
+}
+
+/* ── Laptop-width nav fit (see the matching comment in 10-base.css) ───
+   #topbar .nav / #topbar .nav .nav-ic are set by this active skin
+   (20-skin-site-office.css) at a higher specificity than the plain
+   .tnav-area .nav rule in 10-base.css, so the responsive step-down
+   for the nav items themselves has to be repeated here, at equal
+   specificity, in the last-loaded stylesheet, to actually apply. */
+@media (max-width:1600px){
+  #topbar .nav{ padding:0 11px; }
+}
+@media (max-width:1440px){
+  #topbar .nav{ padding:0 9px; font-size:13px; gap:6px; }
+  #topbar .nav .nav-ic{ width:13px; height:13px; }
+}
+@media (max-width:1180px){
+  #topbar .nav{ padding:0 7px; font-size:12.5px; }
+}
+
+/* Visible (not hidden) horizontal scroll on the nav once the window is
+   too narrow for the steps above to keep everything on one line, so
+   overflow items are discoverable instead of silently scroll-hidden. */
+@media (max-width:1200px){
+  .tnav-area{ scrollbar-width:thin; }
+  .tnav-area::-webkit-scrollbar{ display:block; height:4px; }
+  .tnav-area::-webkit-scrollbar-thumb{ background:var(--s5); border-radius:4px; }
+}
+
+
+
+/* ── Brand subtitle legibility on the blue chassis ──────────────────
+   "Vendor Rating" under the wordmark was set to var(--gold), but --gold is a
+   THEME token that shifts with light/dark, while the topbar band is a fixed
+   blue gradient (#123a6b → #0d2b52) in BOTH themes. In light theme --gold
+   resolves to #c2701a, which lands at 3.42:1 against that band — under the
+   4.5:1 minimum, and the label reads as a muddy smear at 8.5px.
+
+   The band is theme-independent, so the ink on it should be too. Pinned to a
+   fixed soft gold that clears 6.4:1 at the lightest end of the gradient and
+   7.9:1 at the darkest, in both themes. It stays in the marigold family that
+   signs the rest of the chassis (the 2px index line under this bar is the same
+   hue), so the look is unchanged — only the contrast moves.
+
+   #topbar .logo-s (1,0,1) outranks [data-theme="light"] .logo-s (0,1,1), so
+   this one selector covers both themes without touching the skin file. */
+#topbar .logo-s{
+  color:#f2b855;
+  /* 8.5px of letter-spaced uppercase is below comfortable reading size; a
+     point larger with slightly tighter tracking and more weight reads cleanly
+     without changing the height of the logo block. */
+  font-size:9.5px;
+  letter-spacing:1.5px;
+  font-weight:700;
+}

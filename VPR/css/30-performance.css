@@ -1,0 +1,37 @@
+/* ══════════════════════════════════════════════════════════════════
+   PERFORMANCE LAYER
+   Scroll cost came from laying out and painting all ~250 rows every
+   frame. These rules let the browser skip offscreen work without JS
+   virtualization (which would break Ctrl+F and printing).
+   ══════════════════════════════════════════════════════════════════ */
+.tw tbody tr{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 34px;   /* reserve height so scrollbars stay honest */
+}
+.tw{
+  contain:layout paint style;
+  /* Was `overscroll-behavior:contain` — that also trapped VERTICAL wheel
+     events over the table (no vertical overflow to consume them), so the
+     page stopped scrolling whenever the cursor sat on a table. Only the
+     x-axis needs containment (stops swipe-to-go-back). */
+  overscroll-behavior-x:contain;
+  overscroll-behavior-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+/* NOTE: `table-layout:fixed` + `white-space:nowrap` was tried here and
+   REMOVED. It did speed up column sizing, but it truncated 40 cells in the
+   scorecard — full PO numbers (LE/LE24M782/POD/25/000013) need ~218px and
+   were being cut to 196px. Losing a PO number to save a few ms is a bad
+   trade on a procurement dashboard, and the real scroll win comes from
+   content-visibility above, not from fixed layout. Auto layout stays. */
+#main{ contain:layout style; }
+.pn{ contain:layout paint style; }
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
