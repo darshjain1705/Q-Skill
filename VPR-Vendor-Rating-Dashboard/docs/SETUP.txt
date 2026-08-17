@@ -1,0 +1,77 @@
+=====================================================================
+ SETUP - installing Python
+=====================================================================
+
+You only need this if START_WINDOWS.bat told you Python was missing.
+
+You do NOT have to install anything to use the dashboard. Without
+Python you can open vendor_rating.html directly and load the two
+Excel files with the "Select Files" button. Python only enables the
+automatic loading, so you skip that step each time.
+
+
+---------------------------------------------------------------------
+ WINDOWS
+---------------------------------------------------------------------
+
+  1. Go to  https://www.python.org/downloads/
+  2. Click the big "Download Python" button.
+  3. Run the installer.
+  4. IMPORTANT: on the first screen, tick
+
+        [x] Add python.exe to PATH
+
+     It is easy to miss - it sits at the bottom of the window, and
+     the launcher cannot find Python without it.
+
+  5. Click "Install Now" and wait for it to finish.
+  6. Double-click START_WINDOWS.bat again.
+
+ CHECKING IT WORKED
+
+  Press Win + R, type cmd, press Enter, then type:
+
+      python --version
+
+  You should see something like "Python 3.12.4". If instead you see
+  "'python' is not recognized", the PATH box was not ticked - re-run
+  the installer, choose "Modify", and enable it.
+
+
+---------------------------------------------------------------------
+ WINDOWS WITHOUT ADMIN RIGHTS
+---------------------------------------------------------------------
+
+  If your laptop is locked down and you cannot install software:
+
+  - Use the dashboard manually. Open vendor_rating.html, click
+    "Select Files", choose both .xlsx files. Everything works.
+  - Or ask IT for Python 3, or for the Microsoft Store version,
+    which sometimes installs without admin rights.
+
+
+---------------------------------------------------------------------
+ MACOS
+---------------------------------------------------------------------
+
+  macOS usually ships with Python 3 already. Check by opening
+  Terminal and running:
+
+      python3 --version
+
+  If it is missing, macOS will offer to install the developer tools -
+  accept. Or install from https://www.python.org/downloads/
+
+
+---------------------------------------------------------------------
+ WHAT PYTHON IS ACTUALLY DOING
+---------------------------------------------------------------------
+
+  The launcher uses one built-in Python command:
+
+      python -m http.server 8000
+
+  This serves the current folder at http://localhost:8000 so the
+  browser is allowed to read the Excel files next to the dashboard.
+  It is a standard part of Python, installs nothing extra, and is
+  only reachable from your own machine.

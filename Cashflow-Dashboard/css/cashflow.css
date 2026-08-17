@@ -1,0 +1,698 @@
+:root{
+  /* ===== unified skin: mapped onto the shared design system =====
+     (assets/suite-theme.css). Shared-name tokens (--surface,
+     --surface-2/3, --text, --border, --border-strong, --radius,
+     --radius-sm) are intentionally NOT redefined here so the
+     launcher's light/dark theme drives them. Only this tool's
+     unique tokens are remapped below. */
+  --bg:var(--bg-canvas);
+  --bg-2:var(--surface-2);
+  --muted:var(--text-3);
+  --grid:color-mix(in srgb, var(--text) 5%, transparent);
+  --grid-major:color-mix(in srgb, var(--text) 9%, transparent);
+
+  --blue:var(--accent);
+  --green:var(--success);
+  --green-bg:var(--success-weak);
+  --green-text:var(--success);
+  --red:var(--danger);
+  --red-bg:var(--danger-weak);
+  --red-text:var(--danger);
+  --amber:var(--warning);
+  --violet:var(--purple);
+
+  --font-disp:'Space Grotesk','Inter',sans-serif;
+  --font-ui:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-ui);
+  background-color:var(--bg);color:var(--text);padding:18px 24px;line-height:1.4;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px),
+    radial-gradient(120% 120% at 50% 0%,color-mix(in srgb,var(--accent) 8%,transparent) 0%,transparent 45%);
+  background-size:26px 26px,26px 26px,156px 156px,156px 156px,100% 100%;
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;}
+.wrap{max-width:100%;margin:0 auto}
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+h1{font-size:22px;font-weight:500;margin-bottom:4px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.kpi{background:var(--surface-2);border-radius:var(--radius-sm);padding:12px 14px}
+.kpi .lbl{font-size:11px;color:var(--muted);margin-bottom:3px}
+.kpi .val{font-size:22px;font-weight:500}
+.pos{color:var(--green-text)}.neg{color:var(--red-text)}
+.banner{border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;margin-bottom:16px;display:none}
+.banner.warn{background:var(--red-bg);color:var(--red-text)}
+.banner.ok{background:var(--green-bg);color:var(--green-text)}
+.card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:18px;min-width:0}
+.chart-box canvas, .card canvas{max-width:100%}
+.card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.card-note{font-size:12px;color:var(--muted);margin-bottom:14px}
+.chart-box{position:relative;height:280px;max-height:280px;width:100%}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px}
+.sw{width:14px;height:3px;display:inline-block}.dtdot{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* scrollable table */
+.tbl-wrap{overflow-x:auto;padding-bottom:4px}
+.tbl{display:grid;gap:0;min-width:0;width:100%}
+.row{display:contents}
+/* columns: label + contract + 33 months */
+.tbl{grid-template-columns:minmax(110px, 1.5fr) 45px repeat(33,minmax(0, 1fr))}
+
+.hd,.cell,.lbl-cell,.tot-cell,.sum-cell{
+  padding:3px 4px;font-size:10px;border-right:0.5px solid rgba(0,0,0,0.06);
+  border-bottom:0.5px solid rgba(0,0,0,0.06);white-space:nowrap;
+  display:flex;align-items:center;justify-content:flex-end;
+  font-variant-numeric:tabular-nums;
+}
+.lbl-cell{justify-content:flex-start;font-size:11px;font-weight:500;position:sticky;left:0;z-index:2;background:var(--surface);white-space:normal;line-height:1.2;overflow:hidden;}
+.lbl-cell.italic{font-style:italic;font-weight:400}
+.hd{font-size:9px;font-weight:600;color:var(--muted);justify-content:center;
+  position:sticky;top:0;z-index:3;background:var(--surface-2)}
+.hd.lbl-cell{z-index:4}
+.hd.yr{font-size:8px;font-weight:700;color:var(--text);border-top:2px solid var(--border)}
+.cell-out{background:rgba(186,117,23,0.15);color:var(--text)}
+.cell-in{background:rgba(59,111,182,0.15);color:var(--text)}
+.cell-net-pos{background:rgba(29,158,117,0.13);color:var(--green-text)}
+.cell-net-neg{background:rgba(226,75,74,0.15);color:var(--red-text)}
+.tot-cell{background:var(--surface-2);font-weight:600;font-size:10px}
+.sum-cell{background:#eef2f8;font-size:10px;color:var(--muted)}
+.gm-cell{background:#f0faf5;font-size:10px;color:var(--green-text);font-weight:500}
+.spacer-row .lbl-cell,.spacer-row .cell{background:var(--surface);border-bottom:none;height:8px}
+.section-hd .lbl-cell{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--muted);background:var(--surface-2);border-top:1.5px solid var(--border)}
+.section-hd .cell{background:var(--surface-2);border-top:1.5px solid var(--border)}
+/* contract column */
+.contract{font-size:10px;color:var(--muted);font-style:italic}
+/* editable cells */
+.editrow .lbl-cell{cursor:default}
+.cell[contenteditable=true]{outline:none;cursor:text}
+.cell[contenteditable=true]:focus{background:rgba(59,111,182,0.12);outline:1px solid var(--blue);z-index:1}
+
+/* vendor controls */
+.vc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.vc-section-hd{grid-column:1/-1;font-family:var(--font-disp);font-size:11px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin:10px 2px 0;
+  padding-bottom:5px;border-bottom:1px solid var(--border-strong)}
+.vc-section-hd:first-child{margin-top:0}
+.vc-item{border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.vc-item.prorata-mode{border-color:#8b5cf6;background:rgba(139,92,246,0.03)}
+.vc-name{font-size:13px;font-weight:500;margin-bottom:8px}
+.vc-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:var(--muted)}
+.vc-row .lbl{min-width:100px}
+.vc-row .vval{min-width:36px;font-weight:500;color:var(--text)}
+input[type=range]{flex:1;accent-color:var(--green);cursor:pointer}
+/* mode toggle */
+.vc-mode-toggle{display:flex;gap:0;margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.vc-mode-btn{flex:1;padding:4px 6px;font-size:10px;font-weight:600;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--muted);letter-spacing:.03em;transition:all .15s}
+.vc-mode-btn.active-std{background:var(--surface-2);color:var(--text)}
+.vc-mode-btn.active-pr{background:rgba(139,92,246,0.15);color:#8b5cf6}
+/* pro-rata grid */
+.pr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.pr-cell{display:flex;flex-direction:column;gap:2px}
+.pr-cell label{font-size:9px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pr-cell input{width:100%;padding:4px 6px;font-size:12px;border:0.5px solid var(--border);border-radius:4px;background:var(--surface);font-family:inherit;text-align:right}
+.pr-cell input:focus{outline:1px solid #8b5cf6;border-color:#8b5cf6}
+.adv-popup{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--surface);
+  font-size:11px;font-weight:600;padding:7px 11px;border-radius:7px;
+  white-space:nowrap;pointer-events:none;z-index:9999;
+  box-shadow:0 4px 16px rgba(0,0,0,.40);
+  opacity:0;transition:opacity .15s;
+  font-family:var(--font-mono,monospace);}
+.adv-popup::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--text);}
+.vc-adv-wrap{position:relative;display:flex;align-items:center;gap:6px;flex:1;}
+.vc-adv-wrap.show-popup .adv-popup{opacity:1;}
+.pr-sum{font-size:12px;font-weight:700;margin-top:8px;text-align:right;padding:5px 8px;border-radius:5px;transition:all .15s}
+.pr-sum.ok{color:var(--green-text);background:var(--green-bg)}
+.pr-sum.over{color:var(--red-text);background:var(--red-bg);border:1px solid var(--red-text)}
+.pr-sum.under{color:#7c3c00;background:#fff3e0;border:1px solid var(--amber)}
+.pr-fill-btn{font-size:10px;padding:4px 10px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s}
+.pr-fill-btn:hover{background:var(--green-text);color:#fff;border-color:var(--green-text)}
+.pr-cell input:focus{outline:2px solid var(--blue);outline-offset:-1px;border-radius:4px;background:#fff}
+.pr-months-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--muted)}
+.pr-months-row input{width:52px;padding:3px 6px;font-size:12px;border:0.5px solid var(--border);border-radius:4px;background:var(--surface);font-family:inherit}
+
+/* client terms */
+.ct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.ct-item{display:flex;flex-direction:column;gap:4px}
+.ct-item label{font-size:12px;color:var(--muted)}
+.ct-item .row2{display:flex;align-items:center;gap:6px}
+.ct-item input[type=number]{width:66px;font-family:inherit;font-size:13px;padding:5px 7px;
+  border:0.5px solid var(--border);border-radius:6px;background:var(--surface)}
+.csum{font-size:12px;font-weight:500;margin-top:8px}
+.btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+button{font-family:inherit;font-size:13px;padding:8px 14px;background:var(--surface);
+  border:0.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface-2)}
+button.primary{background:var(--green);color:#fff;border-color:var(--green)}
+button.primary:hover{background:#178a65}
+.note{font-size:11px;color:var(--muted);margin-top:6px}
+details{margin-top:10px}summary{cursor:pointer;font-size:12px;color:var(--muted)}
+/* Layout Toggle */
+.dashboard-container { display: flex; flex-direction: column; gap: 15px; transition: opacity 0.25s ease, transform 0.25s ease; }
+.panel-right { order: 1; display: flex; flex-direction: column; gap: 15px; min-width: 0; }
+.panel-left { order: 2; display: grid; grid-template-columns: 1.2fr 1fr; gap: 15px; align-items: start; }
+.chart-grid-bot { display:grid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:15px; margin-bottom:15px; }
+
+/* Tabs (Only in Split Mode) */
+.tabs { display: none; }
+body.split-mode .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
+.tab-btn { flex: 1; padding: 12px 0; text-align: center; background: none; border: none; font-weight: 700; font-size: 12px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; letter-spacing: 0.5px; }
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--green); border-bottom: 2px solid var(--green); }
+
+@keyframes tabFadeIn {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* NOTE: the page-entrance fade is handled by the boot splash + .booted rise-in.
+   A `transform` left on <body> via animation-fill-mode:forwards would make <body>
+   the containing block for every position:fixed child (the splash overlay AND the
+   modals), so a modal opened after scrolling would anchor to the body, not the
+   viewport. Keeping <body> transform-free avoids that. */
+
+body.split-mode #vendorTabContent { display: var(--vendor-display, block); animation: tabFadeIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+body.split-mode #clientTabContent { display: var(--client-display, none); animation: tabFadeIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+body.split-mode .dashboard-container { display: grid; grid-template-columns: 350px 1fr; gap: 20px; align-items: start; }
+.kpi-top-row::-webkit-scrollbar { height: 6px; }
+.kpi-top-row::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+body.split-mode .panel-left { position: sticky; top: 20px; height: calc(100vh - 40px); overflow-y: auto; padding-right: 10px; order: 1; display: flex; flex-direction: column; gap: 0; }
+body.split-mode .panel-left::-webkit-scrollbar { width: 6px; } 
+body.split-mode .panel-left::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+body.split-mode .panel-right { order: 2; }
+body.split-mode .chart-grid-bot { grid-template-columns: 1fr 1fr; }
+/* Compare mode: wrap the 8-tile KPI strip into two labeled rows (assumptions / results)
+   so wide currency values never clip behind the narrowed panel. Only applied when split-mode
+   is genuinely two-column (>1100px); below that the dashboard already collapses to full width. */
+.kpi-group-label{ display:none; }
+@media(min-width:1101px){
+  body.split-mode .kpi-top-row{ grid-template-columns:repeat(4,minmax(0,1fr)); overflow-x:visible; }
+  body.split-mode .kpi-divider{ display:none; }
+  body.split-mode .kpi-group-label{ display:block; grid-column:1/-1; font-family:var(--font-disp); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--blue); padding:12px 14px 2px; }
+}
+
+@media(max-width:1100px){ .chart-grid-bot,body.split-mode .dashboard-container { grid-template-columns: minmax(0,1fr); } body.split-mode .panel-left { position: static; height: auto; overflow-y: visible; padding-right: 0; } }
+/* Always-visible spinners on KPI inputs */
+#k-gmp-input::-webkit-inner-spin-button,
+#k-pv-input::-webkit-inner-spin-button,
+#k-pm-input::-webkit-inner-spin-button {
+  opacity: 1;
+  cursor: pointer;
+  transform: scale(1.4);
+  margin-left: 4px;
+}
+#k-gmp-input, #k-pv-input, #k-pm-input {
+  appearance: number-input;
+  -moz-appearance: number-input;
+}
+
+/* CYANOTYPE SKIN — engineering blueprint instrument panel — (cosmetic overrides only; all layout rules preserved above) */
+
+/* drawing-sheet frame + corner registration ticks (signature) */
+body::before{content:"";position:fixed;inset:9px;pointer-events:none;z-index:6;
+  border:1px solid rgba(125,180,224,0.13);border-radius:4px;
+  background:
+    linear-gradient(var(--blue),var(--blue)) 0 0/15px 1.5px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 0 0/1.5px 15px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 100% 0/15px 1.5px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 100% 0/1.5px 15px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 0 100%/15px 1.5px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 0 100%/1.5px 15px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 100% 100%/15px 1.5px no-repeat,
+    linear-gradient(var(--blue),var(--blue)) 100% 100%/1.5px 15px no-repeat;
+  opacity:.55;}
+
+/* masthead titleblock */
+.masthead{position:relative;}
+.masthead::after{content:"";position:absolute;left:0;bottom:-1px;width:128px;height:2px;
+  background:linear-gradient(90deg,var(--blue),transparent);}
+
+/* typography roles */
+h1{font-family:var(--font-disp);letter-spacing:.04em}
+.sub,.note,.card-note{color:var(--muted)}
+.card-title{font-family:var(--font-disp);color:var(--muted);letter-spacing:.14em;font-weight:600}
+
+/* panels */
+.card{background:linear-gradient(180deg,rgba(28,60,87,0.28),rgba(14,35,53,0.92));
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:0 1px 0 rgba(125,180,224,0.07) inset,0 22px 46px -32px rgba(0,0,0,0.85);
+  transition:border-color .2s ease}
+.card:hover{border-color:var(--border-strong)}
+
+/* table grid */
+.hd,.cell,.lbl-cell,.tot-cell,.sum-cell{
+  border-right-color:rgba(125,180,224,0.08);border-bottom-color:rgba(125,180,224,0.08)}
+.cell,.tot-cell,.sum-cell,.gm-cell{font-family:var(--font-mono)}
+.lbl-cell{background:var(--surface);font-family:var(--font-ui)}
+.hd{background:var(--surface-2);color:var(--muted);font-family:var(--font-disp);letter-spacing:.03em}
+.hd.lbl-cell{font-family:var(--font-disp)}
+.hd.yr{color:var(--text);border-top-color:var(--border-strong)}
+.section-hd .lbl-cell{font-family:var(--font-disp);color:var(--blue);background:var(--surface-2);
+  border-top-color:var(--border-strong);letter-spacing:.12em}
+.section-hd .cell{background:var(--surface-2);border-top-color:var(--border-strong)}
+.spacer-row .lbl-cell,.spacer-row .cell{background:var(--surface)}
+
+.cell-out{background:rgba(246,169,59,0.16);color:#f4cd92}
+.cell-in{background:rgba(61,139,255,0.18);color:#aecbff}
+.cell-net-pos{background:rgba(47,214,166,0.15);color:var(--green-text)}
+.cell-net-neg{background:rgba(255,94,87,0.17);color:var(--red-text)}
+.tot-cell{background:var(--surface-2);color:var(--text)}
+.sum-cell{background:#0f2a40;color:var(--muted)}
+.gm-cell{background:rgba(47,214,166,0.09);color:var(--green-text)}
+.cell[contenteditable=true]:focus{background:rgba(61,139,255,0.22);outline:1px solid var(--blue)}
+.contract{color:var(--muted)}
+
+/* vendor controls */
+.vc-item{border:1px solid var(--border);background:rgba(20,48,71,0.22)}
+.vc-item.prorata-mode{border-color:rgba(159,143,255,0.55);background:rgba(159,143,255,0.06)}
+.vc-name{font-family:var(--font-disp);letter-spacing:.02em}
+.vc-mode-toggle{border-color:var(--border)}
+.vc-mode-btn{font-family:var(--font-disp);color:var(--muted);letter-spacing:.06em}
+.vc-mode-btn.active-std{background:var(--surface-3);color:var(--text)}
+.vc-mode-btn.active-pr{background:rgba(159,143,255,0.18);color:var(--violet)}
+.vc-row .vval{font-family:var(--font-mono);color:var(--text)}
+
+/* range sliders — comfortable pill thumb, filled track */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  height:6px;border-radius:3px;cursor:pointer;
+  background:var(--surface-3);
+  /* filled-left portion set inline by JS via --pct custom prop */
+  background-image:linear-gradient(var(--green),var(--green));
+  background-size:var(--slider-fill,0%) 100%;
+  background-repeat:no-repeat;
+  transition:background-size .1s;
+  vertical-align:middle;
+}
+input[type=range]::-webkit-slider-wrapper{overflow:visible}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--green);
+  border:2.5px solid var(--surface);
+  cursor:pointer;
+  box-shadow:0 0 0 2px rgba(31,193,143,0.35),0 2px 6px rgba(0,0,0,0.30);
+  transition:box-shadow .15s,transform .12s;
+}
+input[type=range]:hover::-webkit-slider-thumb,
+input[type=range]:focus::-webkit-slider-thumb{
+  box-shadow:0 0 0 5px rgba(31,193,143,0.28),0 2px 8px rgba(0,0,0,0.35);
+  transform:scale(1.1);
+}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(0.95)}
+input[type=range]::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--green);border:2.5px solid var(--surface);cursor:pointer;
+  box-shadow:0 0 0 2px rgba(31,193,143,0.30),0 2px 5px rgba(0,0,0,0.28);
+}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--surface-3)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--green)}
+input[type=range]:focus{outline:none}
+/* keyboard users get a visible cobalt focus ring; pointer users don't (was: no cue at all) */
+input[type=range]:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+
+/* pro-rata grid */
+.pr-cell label{color:var(--muted)}
+.pr-cell input{background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono)}
+.pr-cell input:focus{outline:2px solid var(--violet);outline-offset:-1px;border-color:var(--violet);background:var(--surface-3)}
+.pr-sum{font-family:var(--font-mono)}
+.pr-sum.ok{color:var(--green-text);background:var(--green-bg)}
+.pr-sum.over{color:var(--red-text);background:var(--red-bg);border-color:var(--red)}
+.pr-sum.under{color:var(--amber);background:rgba(246,169,59,0.12);border-color:var(--amber)}
+.pr-fill-btn{background:var(--surface-2);border-color:var(--border);color:var(--text);font-family:var(--font-disp);letter-spacing:.04em}
+.pr-fill-btn:hover{background:var(--green);color:#04201a;border-color:var(--green)}
+.pr-months-row input{background:var(--surface-2);border-color:var(--border);color:var(--text);font-family:var(--font-mono)}
+
+/* client terms */
+.ct-item label{color:var(--muted)}
+.ct-item input[type=number]{background:var(--surface-2);border-color:var(--border);color:var(--text);font-family:var(--font-mono)}
+.csum{font-family:var(--font-mono)}
+details summary{font-family:var(--font-disp);letter-spacing:.04em;color:var(--muted)}
+
+/* generic inputs */
+input[type=number],input[type=month]{color:var(--text)}
+input[type=number]:focus{outline:none}
+
+/* buttons */
+button{font-family:var(--font-ui);font-weight:600;background:var(--surface-2);
+  border:1px solid var(--border);color:var(--text);letter-spacing:.01em;transition:all .15s ease}
+button:hover{background:var(--surface-3);border-color:var(--border-strong)}
+button.primary{background:linear-gradient(180deg,#27cd9b,#1aa97c);border-color:transparent;color:#04201a;
+  box-shadow:0 1px 0 rgba(255,255,255,0.18) inset,0 6px 18px -6px rgba(31,193,143,0.55)}
+button.primary:hover{background:linear-gradient(180deg,#34d8a6,#1fc18f);border-color:transparent}
+
+/* banners */
+.banner{font-family:var(--font-mono);border:1px solid transparent}
+.banner.warn{background:var(--red-bg);color:var(--red-text);border-color:rgba(255,94,87,0.42)}
+.banner.ok{background:var(--green-bg);color:var(--green-text);border-color:rgba(47,214,166,0.36)}
+
+/* tabs */
+body.split-mode .tabs{border-bottom-color:var(--border)}
+.tab-btn{font-family:var(--font-disp);letter-spacing:.12em;color:var(--muted)}
+.tab-btn.active{color:var(--green-text);border-bottom-color:var(--green-text)}
+
+/* scrollbars */
+*{scrollbar-color:var(--surface-3) var(--bg-2);scrollbar-width:thin}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg-2)}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:6px;border:2px solid var(--bg-2)}
+::-webkit-scrollbar-thumb:hover{background:var(--border-strong)}
+body.split-mode .panel-left::-webkit-scrollbar-thumb{background:var(--surface-3)}
+
+.custom-dropdown { position: relative; font-size: 12px; font-weight: 500; min-width: 160px; cursor: pointer; outline: none; text-transform:none; letter-spacing:0; }
+.dropdown-selected { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); transition: border-color 0.2s, box-shadow 0.2s; }
+.dropdown-selected:hover { border-color: var(--blue); }
+.custom-dropdown.open .dropdown-selected { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(45,108,223,0.15); }
+.custom-dropdown.open .dropdown-selected svg { transform: rotate(180deg); }
+.dropdown-selected svg { transition: transform 0.2s; color: var(--muted); }
+.dropdown-options { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; z-index: 100; display: none; max-height: 250px; overflow-y: auto; }
+.custom-dropdown.open .dropdown-options { display: block; animation: dropFade 0.2s ease; }
+@keyframes dropFade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.dropdown-option { padding: 8px 12px; color: var(--text); transition: background 0.15s; }
+.dropdown-option:hover { background: var(--surface-2); color: var(--blue); }
+.dropdown-option.active { background: var(--blue); color: white; }
+
+.milestone-highlight summary { background:var(--surface-3); color:var(--text); padding:10px 14px; border-radius:6px; font-weight:700; border: 1px solid var(--blue); border-left: 4px solid var(--blue); outline:none; transition:all 0.2s; cursor:pointer; }
+.milestone-highlight summary:hover { background:var(--surface-2); }
+
+/* orchestrated page-load reveal */
+/* Removed filter:blur() — it forces repaint-heavy paths and causes jank */
+@keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+/* The reveal is gated behind body.booted so it plays exactly as the splash lifts away */
+body.booted .masthead{animation:riseIn .42s cubic-bezier(.2,.7,.2,1) both;will-change:transform,opacity}
+body.booted .panel-left{animation:riseIn .48s cubic-bezier(.2,.7,.2,1) both;animation-delay:.08s;will-change:transform,opacity}
+body.booted .panel-right>div{animation:riseIn .42s cubic-bezier(.2,.7,.2,1) both;will-change:transform,opacity}
+/* (positional nth-child stagger removed — sr-only/banner/toast/<style> siblings made the
+   indices unreliable, so the delays landed on invisible elements. Panels rise in uniformly.) */
+
+/* LIGHT MODE — dyeline / engineering graph-paper variant — prussian ink on cool drafting paper; same identity inverted */
+body.light{
+  --bg:#e9eef4; --bg-2:#dfe6ee; --surface:#ffffff; --surface-2:#eef3f9; --surface-3:#e1eaf4;
+  --text:#0e2438; --muted:#5d7691;
+  --border:rgba(20,60,100,0.16); --border-strong:rgba(20,60,100,0.32);
+  --grid:rgba(40,90,140,0.07); --grid-major:rgba(40,90,140,0.12);
+  --blue:#1f6fe0; --green:#12a87a; --green-bg:rgba(18,168,122,0.12); --green-text:#0f7f5e;
+  --red:#e23b36; --red-bg:rgba(226,59,54,0.10); --red-text:#c22b27;
+  --amber:#c87711; --violet:#6d4fd6;
+  color-scheme:light;
+}
+body.light .card{background:linear-gradient(180deg,#ffffff,#fbfdff);
+  box-shadow:0 1px 2px rgba(20,50,90,0.06),0 16px 34px -28px rgba(20,50,90,0.45)}
+body.light .hd,body.light .cell,body.light .lbl-cell,body.light .tot-cell,body.light .sum-cell{
+  border-right-color:rgba(20,60,100,0.10);border-bottom-color:rgba(20,60,100,0.10)}
+body.light .cell-out{background:rgba(200,119,17,0.16);color:#8a5410}
+body.light .cell-in{background:rgba(31,111,224,0.13);color:#1851a8}
+body.light .cell-net-pos{background:rgba(18,168,122,0.14);color:var(--green-text)}
+body.light .cell-net-neg{background:rgba(226,59,54,0.12);color:var(--red-text)}
+body.light .sum-cell{background:#e9f0fb;color:var(--muted)}
+body.light .gm-cell{background:rgba(18,168,122,0.10);color:var(--green-text)}
+body.light .cell[contenteditable=true]:focus{background:rgba(31,111,224,0.14);outline:1px solid var(--blue)}
+body.light .vc-item{background:#f6fafe}
+body.light .vc-item.prorata-mode{background:rgba(109,79,214,0.06);border-color:rgba(109,79,214,0.45)}
+body.light .vc-mode-btn.active-pr{background:rgba(109,79,214,0.14);color:var(--violet)}
+body.light button.primary{background:linear-gradient(180deg,#16b886,#0f9268);color:#ffffff;
+  box-shadow:0 1px 0 rgba(255,255,255,0.25) inset,0 6px 16px -7px rgba(18,168,122,0.6)}
+body.light button.primary:hover{background:linear-gradient(180deg,#1cc593,#12a87a)}
+body.light .pr-fill-btn:hover{color:#ffffff}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;animation-delay:0!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto!important}
+  body{background-attachment:scroll}
+  body::before{display:none}
+}
+
+/* Performance: only apply content-visibility to the heavy scrollable table area,
+   not to cards (which causes visible pop-in/flicker as cards near the viewport) */
+.sheet {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
+}
+/* The chart canvases benefit from contain:strict so the browser doesn't
+   propagate reflows from them upward */
+.chart-container {
+  contain: layout style;
+}
+/* View Transitions API Customizations for Framer Motion feel */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-group(*) {
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* GLOBAL MOTION SMOOTHING */
+html{scroll-behavior:smooth}
+/* Cross-fade chrome colours when the theme flips (instead of snapping) */
+body{transition:background-color .3s ease,color .3s ease}
+.card,.vc-item,.kpi-top-row,.banner,.dropdown-selected,.dropdown-options,
+.tab-btn,input[type=number],input[type=month],select{
+  transition:background-color .25s ease,border-color .25s ease,color .25s ease,box-shadow .2s ease;
+}
+
+/* Procurement-view toggle: highlight when active */
+#procBtn.active-model{background:var(--blue);border-color:var(--blue);color:#fff}
+#procBtn.active-model svg{stroke:#fff}
+
+/* Modal entrance — overlay fades, panel rises in (replays each time display flips to flex) */
+.modal{animation:overlayFade .22s ease both}
+.modal>div{animation:modalPop .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes overlayFade{from{opacity:0}to{opacity:1}}
+@keyframes modalPop{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+
+/* Mode-switch fade — CSS transition replaces manual JS opacity/transform writes */
+.dashboard-container{
+  transition:opacity 0.16s ease, transform 0.16s ease;
+  will-change:auto;
+}
+.dashboard-container.mode-switching{
+  opacity:0;
+  transform:translateY(8px);
+  pointer-events:none;
+}
+
+/* BOOT SPLASH — blueprint plotter warm-up (premium first paint) — Covers the heavy synchronous build, then lifts away smoothly. — Uses theme variables so it adapts to light / dark automatically. */
+#bootLoader{
+  position:fixed; inset:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(130% 120% at 50% 36%, rgba(61,139,255,0.12) 0%, transparent 55%),
+    var(--bg);
+  transition:opacity .6s cubic-bezier(.4,0,.2,1), visibility .6s, transform .6s cubic-bezier(.4,0,.2,1);
+  will-change:opacity, transform;
+}
+#bootLoader::before{                 /* blueprint graph paper, masked to a soft vignette */
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px),
+    linear-gradient(var(--grid-major) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid-major) 1px,transparent 1px);
+  background-size:26px 26px,26px 26px,156px 156px,156px 156px;
+  -webkit-mask-image:radial-gradient(120% 95% at 50% 45%, #000 28%, transparent 78%);
+  mask-image:radial-gradient(120% 95% at 50% 45%, #000 28%, transparent 78%);
+}
+.bl-frame{ position:absolute; inset:24px; pointer-events:none; border-radius:6px;
+  border:1px solid var(--border); overflow:hidden; }
+.bl-frame::before{                   /* plotter scan-line sweeping top -> bottom */
+  content:""; position:absolute; left:0; right:0; height:1px; top:0;
+  background:linear-gradient(90deg,transparent, rgba(61,139,255,.55), transparent);
+  animation:blScan 2.6s cubic-bezier(.55,0,.45,1) infinite;
+}
+@keyframes blScan{ 0%{top:4%;opacity:0} 14%{opacity:1} 86%{opacity:1} 100%{top:96%;opacity:0} }
+.bl-stage{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;
+  animation:blRise .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes blRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.bl-badge{ width:68px;height:68px;border-radius:15px;
+  background:linear-gradient(180deg,#3d8bff,#1f5fd6);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-disp);font-weight:700;font-size:22px;letter-spacing:-.5px;color:#fff;
+  box-shadow:0 0 0 1px rgba(125,180,224,.35),0 16px 44px -10px rgba(61,139,255,.7);
+  animation:blPulse 2.6s ease-in-out infinite; }
+@keyframes blPulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(125,180,224,.30),0 14px 40px -14px rgba(61,139,255,.5);transform:translateY(0)}
+  50%{box-shadow:0 0 0 1px rgba(125,180,224,.55),0 22px 60px -8px rgba(61,139,255,.95);transform:translateY(-2px)} }
+.bl-word{ margin-top:24px; font-family:var(--font-disp);font-weight:700;font-size:23px;
+  letter-spacing:.24em;color:var(--text);text-indent:.24em; white-space:nowrap; }
+.bl-sub{ margin-top:10px; font-family:var(--font-mono);font-size:10.5px;letter-spacing:.2em;
+  color:var(--muted);text-transform:uppercase;text-indent:.2em; white-space:nowrap; }
+.bl-track{ margin-top:32px;width:240px;max-width:60vw;height:3px;border-radius:3px;
+  background:rgba(125,180,224,.16);overflow:hidden;position:relative; }
+.bl-bar{ position:absolute;top:0;bottom:0;left:0;width:40%;border-radius:3px;
+  background:linear-gradient(90deg,transparent,#3d8bff 40%,#7db4e0 75%,transparent);
+  box-shadow:0 0 12px rgba(61,139,255,.65);
+  animation:blSlide 1.3s cubic-bezier(.55,0,.45,1) infinite; }
+@keyframes blSlide{0%{transform:translateX(-110%)}100%{transform:translateX(360%)}}
+.bl-status{ margin-top:17px;height:14px;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;color:var(--muted);
+  opacity:.9;transition:opacity .2s; }
+#bootLoader.done{ opacity:0;visibility:hidden;pointer-events:none;transform:scale(1.05); }
+@media (prefers-reduced-motion:reduce){
+  #bootLoader,.bl-badge,.bl-bar,.bl-frame::before,.bl-stage{animation:none!important;transition:opacity .25s ease,visibility .25s!important}
+  .bl-badge{transform:none}
+  .bl-bar{width:100%;left:0;transform:none}
+  #bootLoader.done{transform:none}
+}
+
+/* GLOBAL POLISH — refined scrollbars + tactile control feedback */
+*::-webkit-scrollbar{width:11px;height:11px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:8px;border:3px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--border-strong);background-clip:content-box}
+html{scrollbar-width:thin;scrollbar-color:var(--surface-3) transparent}
+
+button{transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .2s ease,transform .12s cubic-bezier(.2,.8,.2,1)}
+button:active{transform:translateY(1px)}
+button.primary{box-shadow:0 8px 20px -10px rgba(31,193,143,.6)}
+button.primary:hover{box-shadow:0 12px 26px -10px rgba(31,193,143,.8)}
+.card{transition:border-color .2s ease, box-shadow .25s ease}
+.vc-item{transition:border-color .18s ease, background-color .18s ease, transform .18s cubic-bezier(.2,.8,.2,1)}
+.vc-item:hover{transform:translateY(-1px)}
+
+/* REDESIGN — hierarchy, sectioning, disclosure, responsive, a11y — (declutter: summary first, evidence on demand; one clear focal path) */
+
+/* KPI strip: de-inlined from markup so a media query can reflow it.
+   Carries exactly the styles the inline rule used to. */
+.kpi-top-row{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(125px,1fr)) 2px repeat(4,minmax(125px,1fr));
+  gap:0;background:var(--surface);border:0.5px solid var(--border);border-radius:12px;
+  overflow-x:auto;margin-bottom:18px;padding-bottom:2px;position:relative;
+}
+/* tabular figures so the count-up tween doesn't jitter tile width */
+.kpi-top-row [id^="k-"], #vendor-margin-display, #svc-markup-val{font-variant-numeric:tabular-nums}
+
+/* Section eyebrow: reuse the blue Chakra-Petch label so the breakdown grid
+   reads as secondary to the hero "Net cash flow" chart. */
+.section-eyebrow{
+  font-family:var(--font-disp);font-size:11px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--blue);margin:4px 2px 10px;padding-bottom:6px;
+  border-bottom:1px solid var(--border-strong);display:flex;align-items:center;gap:8px;
+}
+.section-eyebrow::before{content:"";width:14px;height:1.5px;background:var(--blue);display:inline-block}
+/* Keep the four breakdown cards calm so the hero chart stays dominant */
+.chart-grid-bot .card:hover{border-color:var(--border)}
+
+/* Collapsible evidence tables — reuse the milestone disclosure language */
+details.tbl-disclosure{margin-bottom:0;background:linear-gradient(180deg,rgba(28,60,87,0.28),rgba(14,35,53,0.92));
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:0 1px 0 rgba(125,180,224,0.07) inset,0 22px 46px -32px rgba(0,0,0,0.85);padding:18px}
+body.light details.tbl-disclosure{background:linear-gradient(180deg,#ffffff,#fbfdff)}
+details.tbl-disclosure>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;
+  align-items:center;gap:12px;flex-wrap:wrap;font-family:var(--font-disp);font-size:12px;font-weight:600;
+  letter-spacing:.06em;color:var(--text)}
+details.tbl-disclosure>summary::-webkit-details-marker{display:none}
+details.tbl-disclosure>summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px}
+.disc-caret{transition:transform .2s cubic-bezier(.2,.8,.2,1);color:var(--muted);flex-shrink:0}
+details.tbl-disclosure[open]>.tbl-wrap, details.tbl-disclosure[open]>.card-note{margin-top:14px}
+details.tbl-disclosure[open] .disc-caret{transform:rotate(90deg)}
+.disc-title{display:flex;align-items:center;gap:9px}
+.disc-count{font-family:var(--font-mono);font-size:10px;font-weight:500;color:var(--muted);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:1px 8px;letter-spacing:.02em}
+
+/* Visually-hidden live region for screen-reader KPI / status summaries */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Responsive tiers (the dashboard previously broke below ~1100px) */
+@media(max-width:1100px) and (min-width:761px){
+  .chart-grid-bot{grid-template-columns:1fr 1fr !important}
+}
+@media(max-width:900px){
+  .panel-left{grid-template-columns:1fr !important}
+}
+@media(max-width:760px){
+  .kpi-top-row{grid-template-columns:repeat(2,1fr);overflow-x:visible}
+  .kpi-divider{display:none}
+  body{padding:14px 14px}
+}
+@media(max-width:400px){
+  body{padding:12px 9px}
+  .card{padding:14px}
+  .kpi-top-row{grid-template-columns:1fr}
+}
+/* larger touch targets on coarse pointers (sliders / steppers) */
+@media(pointer:coarse){
+  input[type=range]{height:10px}
+}
+
+/* GOD-LEVEL POLISH — depth, light, choreography, micro-interaction — Layered on top of the Cyanotype system; opacity/transform only. — The global prefers-reduced-motion block above neutralises every — animation here, so motion is opt-out for free. */
+
+/* #1 Material depth & light: frosted instrument panels */
+.kpi-top-row{
+  background:rgba(14,35,53,0.66);
+  backdrop-filter:blur(12px) saturate(1.25);
+  -webkit-backdrop-filter:blur(12px) saturate(1.25);
+  box-shadow:0 1px 0 rgba(125,180,224,0.08) inset,0 18px 40px -30px rgba(0,0,0,0.9);
+}
+body.light .kpi-top-row{ background:rgba(255,255,255,0.66); box-shadow:0 1px 2px rgba(20,50,90,0.05),0 16px 34px -28px rgba(20,50,90,0.4) }
+.modal{ backdrop-filter:blur(7px) saturate(1.1); -webkit-backdrop-filter:blur(7px) saturate(1.1) }
+/* cards lift a touch further under the cursor — depth follows attention */
+.card:hover{ transform:translateY(-2px); box-shadow:0 1px 0 rgba(125,180,224,0.10) inset,0 30px 60px -34px rgba(0,0,0,0.92) }
+.card{ transition:border-color .2s ease,box-shadow .28s cubic-bezier(.2,.7,.2,1),transform .28s cubic-bezier(.2,.7,.2,1) }
+
+/* #2 Numbers that command: tight tracking + state-aware glow */
+.kpi-top-row [id^="k-"],#k-in,#k-out,#k-gm,#k-low,#vendor-margin-display{
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-feature-settings:"tnum" 1;
+}
+#k-low{ transition:color .25s ease }   /* glow applies instantly; only the colour eases */
+#k-low.pos{ text-shadow:0 0 24px rgba(47,214,166,.38) }
+#k-low.neg{ text-shadow:0 0 24px rgba(255,94,87,.42) }
+body.light #k-low.pos{ text-shadow:0 0 18px rgba(15,127,94,.30) }
+body.light #k-low.neg{ text-shadow:0 0 18px rgba(226,59,54,.32) }
+
+/* --- #3 Choreographed entrance: KPI tiles cascade in as the splash lifts ---
+   (.kpi-top-row's direct children are a fixed run of <div>s, so nth-child is
+   reliable here — unlike the mixed panel siblings the old stagger tripped on.) */
+@keyframes kpiRise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+body.booted .kpi-top-row>div{animation:kpiRise .52s cubic-bezier(.2,.7,.2,1) both;will-change:transform,opacity}
+body.booted .kpi-top-row>div:nth-child(1){animation-delay:.10s}
+body.booted .kpi-top-row>div:nth-child(2){animation-delay:.15s}
+body.booted .kpi-top-row>div:nth-child(3){animation-delay:.20s}
+body.booted .kpi-top-row>div:nth-child(4){animation-delay:.25s}
+body.booted .kpi-top-row>div:nth-child(5){animation-delay:.28s}
+body.booted .kpi-top-row>div:nth-child(6){animation-delay:.32s}
+body.booted .kpi-top-row>div:nth-child(7){animation-delay:.37s}
+body.booted .kpi-top-row>div:nth-child(8){animation-delay:.42s}
+body.booted .kpi-top-row>div:nth-child(9){animation-delay:.47s}
+
+/* #5 One restrained accent: a slow cobalt sheen on the masthead rule */
+.masthead::after{
+  background:linear-gradient(90deg,var(--blue),rgba(61,139,255,0) 70%);
+  background-size:220% 100%;animation:mastSheen 7s ease-in-out infinite;
+}
+@keyframes mastSheen{0%,100%{background-position:0% 0}50%{background-position:60% 0}}
+
+/* #6 Micro-interactions: tactile lift, hover accents */
+button:hover{transform:translateY(-1px)}
+button:active{transform:translateY(1px)}
+.kpi-top-row>div:not(.kpi-divider):not(.kpi-group-label){position:relative;transition:background-color .2s ease;padding:15px 17px!important}
+.kpi-top-row>div:not(.kpi-divider):not(.kpi-group-label)::before{
+  content:"";position:absolute;left:0;top:0;height:2px;width:100%;
+  background:linear-gradient(90deg,var(--blue),transparent);
+  transform:scaleX(0);transform-origin:left;transition:transform .25s cubic-bezier(.2,.7,.2,1);
+}
+.kpi-top-row>div:not(.kpi-divider):not(.kpi-group-label):hover::before{transform:scaleX(1)}
+.kpi-top-row>div:not(.kpi-divider):not(.kpi-group-label):hover{background:rgba(125,180,224,0.05)}
+.tab-btn{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease,transform .12s cubic-bezier(.2,.8,.2,1)}
+
+/* #7 Breathing room around the focal chart titles */
+.chart-box{margin-top:4px}
+.legend{margin-top:14px}
+
+
+      @keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}

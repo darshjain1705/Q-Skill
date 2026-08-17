@@ -1,0 +1,16 @@
+# ── Confidential data — never commit ─────────────────────────
+# Real Bank Guarantee master workbook(s)
+Renewables_BG_Master_Final_V2.xlsx
+# Ignore every Excel file, then allow the synthetic sample back in
+*.xlsx
+!BG_Master_SAMPLE.xlsx
+
+# Generated / real e-mail drafts (contain recipient addresses & BG numbers)
+bg_email_drafts/
+*.eml
+
+# ── Editor / OS noise ────────────────────────────────────────
+.claude/
+.vscode/
+Thumbs.db
+desktop.ini

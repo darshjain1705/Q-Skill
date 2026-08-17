@@ -1,0 +1,436 @@
+=====================================================================
+ v4.2 - Vendor Master v2 + the Vendor Details page
+=====================================================================
+
+---- Changed: Vendor_Master.xlsx layout -----------------------------
+The master moved from 5 columns to 10, splitting one vague contact
+into two named escalation levels and separating the map field from
+the postal address:
+
+    OLD  Vendor Code | Vendor Name | Email | Contact Person |
+         Location (City / State)
+
+    NEW  Vendor Code | Vendor Name | Factory Location | Address |
+         First Level Contact Name | First Level Email |
+         First Level Number | Senior Level Contact Name |
+         Senior Level Email | Senior Level Number
+
+Factory Location is the SHORT city/state/country that drives the
+Vendor Location map. Address is free-text postal detail and is
+deliberately never used for mapping - the old single Location column
+had to serve both jobs and could not.
+
+All 38 existing vendor codes and names carry over untouched. Phone
+columns are formatted as TEXT so leading zeros and "+" survive.
+
+---- Changed: "Email Vendor" now copies the senior contact ----------
+First Level Email fills To:, Senior Level Email fills Cc:. Previously
+Cc: was only populated by an explicit "CC" column that no supplied
+master ever had, so leadership was never copied.
+
+---- Added: Vendor Details page (js/app/65-view-vendor-details.js) --
+Sixth nav item. Searchable one-row-per-vendor directory, filterable by
+Complete / Partial / Not in Master, with a click-through detail panel
+(#vdetail:CODE) showing address and both contacts in full. Vendors
+present in the rating workbook but absent from the master are listed
+and flagged rather than hidden, which turns the page into a checklist
+of missing contact data. CSV export included.
+
+---- Fixed: the "How to use" sheet was parsed as vendor data --------
+tryImportVendorMaster() scanned the first 12 rows of EVERY sheet for a
+row containing both a vendor-ish and an email-ish cell. On the master's
+instruction tab, this sentence matched:
+
+    "Step 2 - Fill one row per vendor. Vendor Code and Email are the
+     only required fields..."
+
+so the guide tab was consumed as a data sheet and its prose counted as
+a contact. Harmless while only emails were stored; with full contact
+records it would have written junk rows into the new directory. The
+scanner now skips sheets named like documentation, and rejects any
+candidate header row containing a cell longer than 60 characters -
+column headers are labels, not sentences.
+
+---- Backward compatibility ----------------------------------------
+An old-format master still loads: Email maps to First Level Email,
+Contact Person to First Level Contact Name, Location to Factory
+Location. Verified against the previous file - the one populated row
+(a demo vendor row) resolves to the same email and map pin as
+before.
+
+
+=====================================================================
+ v4.1 - BU analysis + portfolio tidy-up
+=====================================================================
+
+---- Fixed: the "Email Vendor" button did nothing --------------------
+emailVendor() threw a TypeError before it ever built the mailto: URL,
+so the click died silently on every vendor. The per-PO table builder
+guarded the category OBJECT but not its SCORE:
+
+    return c ? c.score.toFixed(1) : '-'
+
+calcCategoryScore() returns null when a team has not rated a PO, and
+h.cats always carries an entry for all four teams, so c was truthy
+while c.score was null. Because a PO enters the loop as soon as ONE
+parameter is filled, any PO not yet rated by all four teams hit the
+null - which is the normal state of the data. The guard now tests the
+value: (c && c.score != null). Nothing surfaced in the console because
+the throw was swallowed by the inline onclick handler.
+Verified across all 38 vendors: every one now builds a valid URL,
+860-1877 chars, all inside the 1900-char mailto budget.
+
+---- Added: BU filter on the Analysis band --------------------------
+New "All BUs" dropdown beside the vendor picker, fed by the PO Master
+"BU" column. No importer change was needed - the sheet parser already
+matched /^bu$/i and carried i.bu onto every row; the value had simply
+never been surfaced. All 125 POs carry a BU, no blanks:
+Gulf - 1 (58), Renewables - Domestic (37), Gulf 2 & Africa (19),
+CIS Countries (11).
+
+The filter scopes the whole Analysis band - category / project / item
+charts, vendor location map, strengths and weaknesses. Portfolio cards
+ABOVE the Analysis heading stay portfolio-wide, matching how the vendor
+filter already behaved. BU and vendor cascade: picking a BU narrows the
+vendor dropdown to that BU and clears any vendor outside it. A BU with
+no rated POs in the active half falls back to All rather than drawing
+empty charts.
+
+---- Added: BU-wise Rating + BU-wise Performance cards --------------
+Two cards under the Analysis band: a 0-5 bar chart mirroring
+Category-wise Rating, and score-% bars mirroring Project-wise
+Performance. Clicking a bar selects that BU.
+
+These two deliberately ignore the BU filter itself - filtering to one
+BU leaves a single bar, which compares nothing. The comparison stays
+whole and the selected BU is highlighted while the rest dim. Vendor and
+team scope still apply. Bar colours are keyed to the BU list rather
+than bar position, so a BU keeps its colour as bars reorder by score.
+
+Worth knowing, surfaced by this chart: Quality has been rated in
+Renewables - Domestic only (8 POs). Gulf - 1, Gulf 2 & Africa and CIS
+Countries have zero Quality evaluations between them across 77 rated
+POs, so picking Quality correctly leaves one bar. SCM and EDRC cover
+every BU; Operations is patchy.
+
+---- Added: vendor breakdown inside a BU ----------------------------
+Both BU cards now have a clickable header (chevron) opening a full
+drill-down that answers "inside this BU, which vendor performs how".
+It follows the same shape as the project and item drill-downs.
+
+Aggregation is keyed on BU + VENDOR, not vendor alone: a vendor can
+hold POs in more than one BU and each pairing is its own performance
+story, so it gets its own row. The table lists every rated vendor
+grouped by BU and ranked inside each BU, with POs, rating count, tier
+and score %. Clicking a row opens that vendor's page.
+
+Picking a BU in the Analysis bar narrows the drill-down to that unit
+and retitles it. Note this differs from the two BU cards themselves,
+which deliberately keep comparing all BUs - the drill-down is where a
+single BU is the point, so there it honours the filter.
+
+Two charts: the top vendors by score, and a strongest-vs-weakest
+vendor bar per BU. The second is the useful one - a wide gap means the
+BU average is hiding a weak vendor behind a strong one. Currently CIS
+Countries spans 90% (Sungrow) down to 63% (Chint) across 4 vendors.
+
+Team scope carries through: picking SCM re-scores every row on SCM
+parameters only and drops vendors with no SCM ratings (40 vendor-BU
+pairings overall, 28 under SCM).
+
+---- Fixed: "Vendor Rating" unreadable in the top bar -----------------
+The wordmark subtitle was set to var(--gold), but --gold is a THEME token
+that shifts with light/dark while the top bar is a fixed blue gradient
+(#123a6b -> #0d2b52) in BOTH themes. In light theme --gold resolves to
+#c2701a, giving 3.42:1 against that band - below the 4.5:1 minimum, and at
+8.5px it read as a muddy smear. Dark theme happened to pass at 5.23:1,
+which is why it looked fine on one theme and not the other.
+
+A comment in the skin file shows this was patched once before, when the bar
+went from grey to blue. That fix moved the label onto --gold, but --gold
+itself is still theme-dependent, so the light theme stayed broken.
+
+Fixed at the cause: the band does not change with the theme, so the ink on
+it should not either. #topbar .logo-s is now pinned to a fixed soft gold
+(#f2b855) - 6.38:1 at the lightest end of the gradient, 7.92:1 at the
+darkest, identical in both themes. It stays in the marigold family that
+signs the rest of the chassis (the 2px index line under the bar is the same
+hue), so the look is unchanged; only the contrast moved. Size went 8.5 ->
+9.5px with slightly tighter tracking and more weight, which reads cleanly
+without changing the height of the logo block.
+
+The selector #topbar .logo-s (1,0,1) outranks [data-theme="light"] .logo-s
+(0,1,1), so one rule covers both themes and the skin file is untouched.
+
+---- Fixed: names containing "&" broke every click-through -----------
+Found while wiring the BU bar click. Click targets were built as
+hesc(esc(name)), but esc() ALREADY does both jobs - it escapes quotes and
+backslashes for the JS string AND converts & < > " to HTML entities for the
+attribute. Wrapping it in hesc() escaped the ampersand a second time, so
+"Gulf 2 & Africa" reached the handler as "Gulf 2 &amp; Africa" and matched
+nothing.
+
+This was not new. Two projects in the current workbook carry an ampersand -
+Samarkand-1 and Samarkand-2 Solar PV & BESS IPP Offshore-1 - and clicking
+either bar opened a Project Dashboard reading "0 PO(s)". An empty page, not
+an error, so nothing appeared in the console and it looked like missing data
+rather than a broken link. Both now open correctly at 6 POs / 5 vendors.
+
+Corrected at all three call sites: the project bars on the Portfolio page and
+the row-navigation helper in 10-state-and-helpers.js (project and vendor).
+Vendor codes were unaffected in practice since they are alphanumeric, but the
+call was fixed too. There are now no hesc(esc(...)) pairs left in the code.
+
+---- Changed: clicking a BU bar opens the vendor breakdown -----------
+Previously a bar click only set the BU filter. It now sets the filter AND
+opens the vendor drill-down for that BU, which is what the bar looks like it
+should do. The header chevron still opens the same view, and the dropdown
+still filters without navigating.
+
+---- Fixed: Top Strengths / Weakest Parameters were never rendered ---
+advancedPanels was assembled on every render - data, bars, empty state
+and all - and then referenced nowhere. Dead code, so the panels had
+never appeared on the page. Now rendered directly under the Analysis
+band. No data work was needed: the underlying paramAgg already reads
+from aItems, so the panels pick up the BU, vendor and team scope as
+they stand. Headings carry the vendor name to match the sibling cards.
+
+Note the sample sizes go thin per vendor - a single evaluation renders
+identically to ninety at a glance. The rating count sits under each bar.
+
+---- Removed: "Overall Avg (all categories)" ------------------------
+Dropped from the foot of the Overall Category-wise Rating panel, along
+with the overallAvg5 computation that fed it - that row was its only
+consumer. The four per-category rows and their medal winners are
+unchanged. The .vpd-avg rules in css/10-base.css (lines ~1300-1305) are
+now unused but were left in place.
+
+---- Removed: Analysis sub-heading ----------------------------------
+The "(all charts below reflect the active evaluation period ...)"
+parenthetical is gone; the heading is just "Analysis". The vendor and
+team labels it carried still appear on the individual chart titles.
+
+---- Known data issue, not addressed --------------------------------
+PO Master "PO VALUE COMPANY CURRENCY" mixes two currencies and cannot
+be summed as-is. Six USD POs convert at a real INR rate (83.26-94.66)
+and land in INR; the 40 Saudi riyal rows (0.2663) and the single AED
+row (0.2723) convert at the USD peg and land in USD; the 47 remaining
+USD rows and 31 INR rows sit at rate 1.0 in their own currency. Any
+value-weighted view built on this column will be wrong. Ratings and
+every view in this release are unaffected - none of them read PO value.
+
+---- Also worth noting ----------------------------------------------
+Only 3 of 38 vendors have an email in Vendor_Master.xlsx. The Email
+Vendor button now works for all of them, but for the other 35 it opens
+the mail client with a blank recipient - a data gap, not a fault. The
+button's tooltip and toast already say so.
+
+README.txt still refers to START_MAC.command, which is not present in
+this folder. Mac users need the manual route (open vendor_rating.html,
+"Select Files") until that launcher is added back.
+
+=====================================================================
+ CHANGELOG
+=====================================================================
+
+=====================================================================
+ v4.0 - correctness release + project restructure
+=====================================================================
+Everything below was found by reconciling every on-screen number
+against the raw workbook with an independent Python read of the
+Excel, and fixed at the source. All five views were re-verified in
+H1, H2 and BOTH after each change; the browser console stayed clean.
+
+---- Fixed: rated vs approved were the same thing ------------------
+The importer only stored scores once STATUS was filled in, so a PO
+the evaluator had fully rated - but no approver had stamped - was
+invisible. Quality showed 8 of 124 rated when the evaluators had
+really done 94. The importer now records an evaluator-progress flag
+per row, independent of STATUS. Scores stay approval-gated exactly
+as before; progress reporting no longer is.
+
+---- Fixed: team totals did not reconcile with the workbook --------
+Each category sheet has exactly 250 rows (125 POs x 2 halves), but
+Team Workload showed 244 / 238 / 248 / 249. Two causes: rows with a
+blank EVALUATOR were dropped by the view, and rows with evaluator,
+approver AND status all blank were never recorded by the importer.
+Both fixed; unassigned work now appears under "(no evaluator named)"
+and every team reads 250 in BOTH scope.
+
+---- Fixed: "Not Approved and Changed" counted as approved ---------
+Completeness credited a rejected-and-sent-back evaluation as an
+approval, so a vendor could show fully approved at the top of the
+page while the same POs showed pending further down (the Trinity
+Touch contradiction). Only a real "Approved" counts now. The Excel
+export still emits scores for both statuses - that gate is about
+score availability, not approval - and says so in a comment.
+
+---- Fixed: three duplicate half-year selectors --------------------
+Vendor Focus, Scorecard and Completeness each carried their own
+H1/H2 switch; the Completeness one had no BOTH at all and drifted
+out of sync with the header. All three removed. The top-bar
+H1 / H2 / BOTH switch is now the only control and every label
+follows it (16 labels updated to show "H1 + H2" in BOTH).
+
+---- Fixed: ITEM column hid one half's item in BOTH ---------------
+The same PO can carry different items per half (Cables in H1,
+Transformer in H2). The Matched Items table now stacks each half's
+item with an H1/H2 tag, collapses to one line when both halves
+share an item, and the item filter matches either half.
+
+---- Changed: Completeness team columns count POs, not parameters --
+"SCM 30% . POs rated" now reads e.g. 1/2 - one of this vendor's two
+POs rated by SCM - instead of 15/30 parameters. The parameter figure
+moved into the cell tooltip. Cross-checked to match Team Workload
+exactly for every vendor in every scope.
+
+---- Changed: Team Workload rebuilt around evaluation tasks --------
+Unit of work is PO x team x half-year, matching the sheet rows.
+New: KPI strip (total / rated / yet-to-rate / approved / approval
+pending, all clickable filters), per-evaluator progress table,
+approver queue, per-team comparison matrix, and a searchable PO
+table with status chips. "Returned" wording changed to "Changed"
+to match the workbook's own language.
+
+---- Restructure: one 2 MB html split into html / css / js ---------
+vendor_rating.html is now a 154-line skeleton; styling lives in
+css\ (4 files), code in js\ (vendor libraries, 10 ordered app
+modules, 4 support scripts). Split is byte-exact - every module
+was diffed back against the original and each file parses clean.
+Verified end-to-end over both http:// (launcher) and file://
+(manual mode): identical numbers, zero console errors.
+
+---- Tested ---------------------------------------------------------
+All 65 inline handlers resolve to real functions; all 39 distinct
+buttons across the five views clicked without error; no duplicate
+element ids; no filter input loses focus while typing; report Excel
+export downloads; vendor print flow reaches the print dialog; theme
+toggle cycles light/dark; BOTH-scope selection survives a reload.
+
+=====================================================================
+ v3.0 — performance + restyle
+=====================================================================
+
+Everything below was measured in a real browser against the two workbooks in
+this folder, comparing v2.0 and v3.0 side by side. All five views were checked
+to produce identical numbers and identical text after the changes.
+
+
+---- Fixed: switching to Completeness took ~300 ms (now ~45 ms) --
+
+This was the lag you could feel, and it was not where it looked like it was.
+
+getQuarterRatingsForItem() and getQuarterMetaForItem() each did a
+synchronous localStorage.getItem() plus a full JSON.parse() of the entire
+ratings blob — and they are called twice per item inside a nested loop.
+Rendering one 250-item view meant roughly 500 localStorage reads and 500 full
+JSON parses.
+
+The blob only changes when something writes it, so it is now parsed once and
+kept. Invalidation is wired into localStorage.setItem / removeItem /
+clear, which means the cache cannot go stale no matter which code path
+writes — including the copy-quarter and import paths. A storage event
+listener covers a second tab writing the same keys.
+
+Verified: the cache correctly returns fresh data after a write, and returns
+empty again after a delete. Callers only ever read the returned object, never
+mutate it.
+
+                                   v2.0     v3.0   
+   Completeness view, script time  301 ms   45 ms  
+   Full nav cycle (5 views x3)     2593 ms  1425 ms
+---- Fixed: risk lookup scanned the whole risk list per row ------
+
+getRisk() was recomputed on every render, and each table row then did
+risks.find(...) inside a .map() — an O(n x m) scan.
+
+getRisk() is now memoized and backed by an index, so the per-row lookup is a
+single Map hit. The result is cached until the data reloads, and is cleared by
+the same invalidateAll() that already clears the row cache.
+
+One subtlety worth recording: the two-key lookup (item + sheet) must not
+fall back to an item-only match. The original
+find(r => r.item === i.item && r.sheetId === i.sheetId) returns undefined
+on a sheet mismatch, and callers depend on that to avoid cross-sheet bleed. A
+first attempt got this wrong and was caught by an equivalence test that
+compared old and new against 1000 rows — both call shapes now match the
+original exactly, zero mismatches.
+
+
+---- Fixed: every view switch forced a synchronous reflow --------
+
+setM() wrote innerHTML into the live #main, then used
+void m.offsetWidth to restart the swap animation — which forces a synchronous
+layout on a subtree of several hundred KB.
+
+#main is now detached before the write (mutations on a disconnected node skip
+layout and style recalc entirely) and reattached after, and the animation
+restarts on requestAnimationFrame instead of a forced reflow.
+
+streamRows() now parses each chunk into a DocumentFragment and appends it
+once, rather than calling insertAdjacentHTML per chunk — one layout pass per
+chunk instead of one per row. Tables under 150 rows skip scheduling entirely
+and paint in a single write.
+
+
+---- Improved: scrolling long tables -----------------------------
+
+Rows outside the viewport now skip layout and paint via content-visibility,
+with contain-intrinsic-size reserving their height so the scrollbar stays
+honest and does not jump. Scroll containers get their own containment so
+scrolling one table cannot invalidate the rest of the page.
+
+No JS virtualization was used, deliberately — it would have broken Ctrl+F and
+printing, which matter on a dashboard people export from.
+
+Tried and rejected: table-layout:fixed with white-space:nowrap. It did
+speed up column sizing, but it truncated 40 cells in the scorecard — full PO
+numbers such as LE/LE00X000/POD/00/000000 need about 218 px and were being
+cut to 196 px. Losing a PO number to save a few milliseconds is a bad trade on
+a procurement dashboard, so it was removed. Auto layout stays.
+
+
+---- Changed: new skin — "Calibration" ---------------------------
+
+Vendor rating is measurement, so the surface now reads as a precision
+instrument rather than a paper drawing: a graphite chassis, a cool slate field,
+and a single amber index mark.
+
+The signature is the calibration rule — a tick-marked band under the active
+tab, ticked at the same interval the dashboard measures, that wipes in from the
+left on hover and fills on selection.
+
+Numerals are tabular throughout, so columns of scores align optically. Panel
+titles are set as small uppercase legends rather than headings. Focus rings are
+always visible, and prefers-reduced-motion is respected.
+
+This layer only overrides design tokens and component chrome. No logic was
+touched by the restyle.
+
+
+---- Note on the layout ------------------------------------------
+
+The skin is layered on top of the previous one rather than replacing it, so the
+page structure, the charts and the world map are unchanged. If you want a
+different structure — not just a different surface — that is a separate piece
+of work and worth scoping on its own.
+
+---
+
+
+=====================================================================
+ Known limitations (carried over from v2.0, unchanged)
+=====================================================================
+
+- Rating totals count rows, not evaluations. EDRC, Quality and Operations
+  each hold 250 rows covering the same 125 POs, so summing rows across sheets
+  overstates the total roughly 4x. Any "total ratings" figure should dedupe on
+  PO + period. Unchanged here because it is a reporting decision, not a bug.
+
+- ITEM is only filled for 6 of 125 POs, so the Item-wise Performance chart
+  is built from those six. Add more ITEM entries in SCM to widen it.
+
+- KPI numbers animate on entry. The count-up takes roughly 900 ms to settle.
+  This is cosmetic and was in v2.0 too, but it is worth knowing if you are
+  screenshotting the page: capture after the numbers stop moving, or you will
+  catch a mid-count value.

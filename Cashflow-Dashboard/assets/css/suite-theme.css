@@ -1,0 +1,121 @@
+/*
+ * Shared design tokens for the whole suite (light + dark).
+ * Each tool maps its own local variables onto these tokens so the launcher
+ * and all three dashboards stay visually consistent.
+ */
+:root{
+  /* surfaces */
+  --bg-canvas:#f6f8fb;
+  --surface:#ffffff;
+  --surface-2:#f4f6f9;
+  --surface-3:#eceff4;
+  --surface-inset:#f8fafc;
+
+  /* borders / lines */
+  --border:#e7eaf0;
+  --border-strong:#d6dbe4;
+  --divider:#eef1f5;
+
+  /* text */
+  --text:#10151f;
+  --text-2:#3d4656;
+  --text-3:#697284;
+  --text-faint:#98a1b2;
+  --text-on-accent:#ffffff;
+
+  /* brand accent — Acme blue */
+  --accent:#0072bc;
+  --accent-strong:#005a96;
+  --accent-weak:#e8f1fb;
+  --accent-border:#bcd8f0;
+
+  /* semantic */
+  --success:#15824b; --success-weak:#e6f5ec; --success-border:#aedcc1;
+  --warning:#9a6411; --warning-weak:#fcf3e0; --warning-border:#eccd8a;
+  --danger:#bb3326;  --danger-weak:#fbe9e6;  --danger-border:#e6ad9f;
+  --info:#2f6f8f;    --info-weak:#e4f1f6;    --info-border:#a7cedd;
+  --purple:#5a4ba8;  --purple-weak:#ece9f8;
+
+  /* elevation — subtle, fintech */
+  --shadow-xs:0 1px 1px rgba(16,24,40,.04);
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06),0 1px 1px rgba(16,24,40,.04);
+  --shadow-md:0 2px 4px -1px rgba(16,24,40,.08),0 4px 12px -2px rgba(16,24,40,.08);
+  --shadow-lg:0 12px 32px -8px rgba(16,24,40,.16),0 4px 10px -4px rgba(16,24,40,.08);
+  --ring:0 0 0 3px rgba(0,114,188,.18);
+
+  /* radii */
+  --radius-sm:6px; --radius:8px; --radius-lg:12px; --radius-xl:16px;
+
+  color-scheme:light;
+}
+
+[data-theme="dark"]{
+  --bg-canvas:#0d1117;
+  --surface:#161b22;
+  --surface-2:#1b212b;
+  --surface-3:#232b36;
+  --surface-inset:#12171e;
+
+  --border:#272e3a;
+  --border-strong:#39424f;
+  --divider:#21272f;
+
+  --text:#e7ebf2;
+  --text-2:#aeb7c5;
+  --text-3:#828d9d;
+  --text-faint:#5c6675;
+  --text-on-accent:#06121d;
+
+  --accent:#3d9bff;
+  --accent-strong:#62b0ff;
+  --accent-weak:rgba(61,155,255,.14);
+  --accent-border:rgba(61,155,255,.32);
+
+  --success:#3ad99b; --success-weak:rgba(58,217,155,.13); --success-border:rgba(58,217,155,.32);
+  --warning:#f0b54e; --warning-weak:rgba(240,181,78,.13); --warning-border:rgba(240,181,78,.32);
+  --danger:#f0685b;  --danger-weak:rgba(240,104,91,.13);  --danger-border:rgba(240,104,91,.32);
+  --info:#4ec3e6;    --info-weak:rgba(78,195,230,.13);    --info-border:rgba(78,195,230,.32);
+  --purple:#9d8cf0;  --purple-weak:rgba(157,140,240,.14);
+
+  --shadow-xs:0 1px 1px rgba(0,0,0,.3);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow-md:0 2px 6px rgba(0,0,0,.45);
+  --shadow-lg:0 16px 40px -8px rgba(0,0,0,.6);
+  --ring:0 0 0 3px rgba(61,155,255,.26);
+
+  color-scheme:dark;
+}
+
+html{transition:background-color .2s ease}
+*{scrollbar-color:var(--border-strong) transparent}
+
+/* shared theme-toggle control */
+.theme-toggle{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;flex-shrink:0;
+  border:1px solid var(--border-strong);border-radius:var(--radius);
+  background:var(--surface);color:var(--text-2);cursor:pointer;
+  transition:background .14s,color .14s,border-color .14s;padding:0;
+}
+.theme-toggle:hover{background:var(--surface-2);color:var(--text);border-color:var(--accent-border)}
+.theme-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.theme-toggle .ic-sun{display:none}
+[data-theme="dark"] .theme-toggle .ic-moon{display:none}
+[data-theme="dark"] .theme-toggle .ic-sun{display:inline-block}
+
+/* Acme brand lockup — mark with company name below */
+.brand{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  flex-shrink:0;line-height:1;user-select:none;
+}
+.brand__mark{
+  height:34px;width:auto;display:block;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.12));
+}
+.brand__name{
+  font-family:'Space Grotesk','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:7.5px;font-weight:700;letter-spacing:1.7px;
+  color:var(--text);white-space:nowrap;text-transform:uppercase;
+}
+.brand--lg .brand__mark{height:52px}
+.brand--lg .brand__name{font-size:11px;letter-spacing:2.8px}
