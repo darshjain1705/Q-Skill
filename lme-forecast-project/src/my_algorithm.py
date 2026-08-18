@@ -49,8 +49,11 @@ before you write anything. Your job is to beat that.
 """
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.isotonic import IsotonicRegression
 
-from gating import StaticCombiner
+from gating import ClusteredRouter, StaticCombiner
 
 
 # =====================================================================
@@ -176,98 +179,156 @@ def smooth_labels_hysteresis(scores: np.ndarray, enter: float = 0.65,
 # =====================================================================
 
 class MyRouter:
-    """Template. Replace the body with your own routing algorithm.
+    """Confidence-Thresholded Cluster Router (CTCR).
 
-    Interface contract -- keep these three methods and their signatures
-    and the evaluation harness will pick your algorithm up automatically:
+    THE MECHANISM. Every other router in this codebase routes at full
+    strength regardless of how sure it is. `routing_economics()` shows why
+    that is costly: a router correct with probability p only beats static
+    combination once p clears a break-even p_star that sits well above a
+    coin flip. Below p_star, routing loses money; above it, routing pays.
 
-        fit(state_vector, expert_preds, y_true)  -> self
-        predict_weights(state_vector)            -> (n, n_experts), rows sum to 1
-        combine(state_vector, expert_preds)      -> (predictions, weights)
+    CTCR estimates, for ITS OWN classifier, the confidence level at which
+    that crossing actually happens -- call it c_star -- and blends toward
+    the static combiner below it:
 
-    `state_vector` is a DataFrame of market-state features (volatility,
-    Hurst, trailing expert errors, and -- in the routing conditions --
-    inventory pressure). `expert_preds` during fit are OUT-OF-FOLD
-    predictions; do not replace them with in-sample ones, that is the bug
-    that broke the original project.
+        w(x) = lambda(c) * w_regime(x)  +  (1 - lambda(c)) * w_static
+        lambda(c) = clip((c - c_star) / (1 - c_star), 0, 1)
 
-    ---------------------------------------------------------------
-    THREE DIRECTIONS WORTH CONSIDERING
-    ---------------------------------------------------------------
+    So lambda = 0 (pure static, no routing) at or below c_star, rising
+    linearly to lambda = 1 (full routing) as confidence approaches 1.
+    c_star is not hand-tuned -- it is estimated empirically for this
+    dataset, this expert panel, and this classifier (see `fit` below), so
+    it plays the same role that `p_star_breakeven_accuracy` plays in the
+    theory, but calibrated directly on realised loss rather than derived
+    from ground-truth regime labels that a real deployment never has.
 
-    1. CONFIDENCE-WEIGHTED SHRINKAGE  (recommended starting point)
-       Route hard when sure, fall back to static weights when not:
+    HOW REGIMES ARE FOUND. No regime labels are available -- real data has
+    none. Following `ClusteredRouter`, regimes are discovered by k-means
+    clustering the experts' row-normalised absolute-error profile: rows
+    where the same expert tends to win end up in the same cluster. A
+    classifier is then trained to predict cluster membership from the
+    market-state vector, exactly as in `ClusteredRouter`. CTCR's only new
+    ingredient is the confidence-based shrinkage layered on top of that.
 
-           w = lambda(c) * w_regime  +  (1 - lambda(c)) * w_static
+    HOW c_star IS ESTIMATED (the calibration step, and the part worth
+    reading carefully). The training window is split in TIME ORDER into
+    an inner-fit slice (the first `1 - calib_frac`) and an inner-calibration
+    slice (the remainder). Clusters and the classifier are fit on the
+    inner-fit slice only. On the inner-calibration slice -- data the
+    classifier did not see -- the realised benefit of routing at full
+    strength is measured directly:
 
-       where c is classifier confidence. The evidence says routing at
-       full strength on a near-coin-flip is worse than not routing, so
-       lambda should go to 0 as accuracy approaches `p_star` from
-       `routing_economics`. Deriving lambda from that break-even rather
-       than hand-tuning it is what turns a heuristic into an algorithm.
+        benefit(x) = |static_pred - y| - |routed_pred - y|
 
-    2. PERSISTENCE-AWARE REGIME ESTIMATION
-       Pointwise classification discards the fact that regimes last for
-       weeks. Options: `smooth_labels_hysteresis` above; a hidden Markov
-       filter that carries a transition matrix; or a sequential test that
-       accumulates evidence and only switches when it crosses a
-       threshold. Any of these should raise effective accuracy without
-       needing a better classifier.
+    positive means routing beat static at that point. An isotonic
+    (monotonic) regression of benefit against classifier confidence is
+    fit on the calibration slice, and c_star is read off as the
+    confidence value where that curve crosses zero. This is a direct,
+    dataset-specific analogue of p_star: instead of assuming a classifier
+    accuracy and looking up a break-even in theory, it measures the
+    break-even this particular classifier actually achieves.
 
-    3. LOSS-ALIGNED REGIME CLASSIFICATION
-       A standard classifier maximises accuracy, treating all mistakes as
-       equal. They are not: confusing regime A for B may cost far more
-       than the reverse, depending on how different the experts' errors
-       are. Weight the classifier's training samples by how much the
-       routing decision actually matters at that timestep -- i.e. by the
-       spread in expert errors. Cheap to implement, and the argument for
-       it is strong.
-
-    Combining 1 and 2 into one named method makes a coherent, presentable
-    contribution. Do NOT do all three at once -- add one mechanism at a
-    time and keep the ablation, or you will not know which part worked.
+    LIMITATION, worth stating plainly rather than hiding: c_star is
+    calibrated on a single time-ordered split of the training window and
+    is not revisited afterwards, so it can drift stale on a very long
+    deployment. A rolling recalibration is the natural next step and is
+    flagged rather than implemented, to keep this version simple enough
+    to defend in full.
     """
 
-    def __init__(self, **params):
-        # Put your hyperparameters here. Keep them named and explicit so
-        # they end up in the paper's reproducibility section.
-        self.params = params
+    def __init__(self, n_regimes: int = 2, calib_frac: float = 0.3,
+                 confidence_method: str = "margin", min_cluster: int = 25,
+                 min_train: int = 60, random_state: int = 0):
+        self.n_regimes = n_regimes
+        self.calib_frac = calib_frac
+        self.confidence_method = confidence_method
+        self.min_cluster = min_cluster
+        self.min_train = min_train
+        self.random_state = random_state
+
         self.static_ = None
         self.n_experts = None
+        self.classifier_ = None
+        self.cluster_weights_ = None
+        self.classes_ = None
+        self.c_star_ = 1.0   # 1.0 = "never fully trust the router" until calibrated
 
     # -----------------------------------------------------------------
     def fit(self, state_vector: pd.DataFrame, expert_preds: np.ndarray,
             y_true: np.ndarray):
-        """Learn your routing policy.
-
-        Available to you here:
-          - state_vector : market-state features (DataFrame)
-          - expert_preds : OUT-OF-FOLD expert predictions (n, n_experts)
-          - y_true       : realised targets (n,)
-
-        You do NOT get regime labels. Real data has none -- that is the
-        whole difficulty. You must either infer regimes (cluster the
-        expert-error patterns, fit a Markov-switching model, threshold a
-        signal) or route without ever naming them.
-        """
+        X = np.asarray(state_vector, dtype=float)
         expert_preds = np.asarray(expert_preds, dtype=float)
+        y_true = np.asarray(y_true, dtype=float)
+        n = len(y_true)
         self.n_experts = expert_preds.shape[1]
         self.static_ = StaticCombiner().fit(expert_preds, y_true)
 
-        # ================= YOUR CODE STARTS HERE =====================
-        # Placeholder: pure static combination, no routing at all.
-        # This is the bar you must clear. Delete it and write your method.
-        # =============================================================
+        split = int(n * (1 - self.calib_frac))
+        if split < self.min_train or (n - split) < self.min_train:
+            # Not enough data to both fit a router and calibrate it
+            # honestly. Fall back to static combination rather than
+            # calibrate on too little data and trust a noisy estimate.
+            self.classifier_ = None
+            return self
+
+        Xa, Xb = X[:split], X[split:]
+        Ea, Eb = expert_preds[:split], expert_preds[split:]
+        ya, yb = y_true[:split], y_true[split:]
+
+        # ---- discover regimes from the error-profile shape (fit slice) --
+        k = max(2, min(self.n_regimes, split // self.min_cluster))
+        profile = ClusteredRouter._error_profile(Ea, ya)
+        labels = KMeans(n_clusters=k, n_init=10,
+                        random_state=self.random_state).fit_predict(profile)
+
+        cluster_weights = np.vstack([
+            StaticCombiner().fit(Ea[labels == c], ya[labels == c]).weights_
+            if (labels == c).sum() >= max(self.min_cluster, self.n_experts * 3)
+            else self.static_.weights_
+            for c in range(k)
+        ])
+        clf = HistGradientBoostingClassifier(
+            max_iter=200, random_state=self.random_state).fit(Xa, labels)
+
+        self.classifier_ = clf
+        self.cluster_weights_ = cluster_weights
+        self.classes_ = clf.classes_
+
+        # ---- calibrate c_star on the held-out calibration slice ---------
+        proba_b = clf.predict_proba(Xb)
+        conf_b = confidence_from_proba(proba_b, method=self.confidence_method)
+        W = self.cluster_weights_[np.asarray(self.classes_, dtype=int)]
+        pred_route_b = np.sum((proba_b @ W) * Eb, axis=1)
+        pred_static_b = Eb @ self.static_.weights_
+        benefit = np.abs(pred_static_b - yb) - np.abs(pred_route_b - yb)
+
+        if len(conf_b) < 20 or len(np.unique(conf_b)) < 3:
+            self.c_star_ = 1.0  # too little to calibrate; never fully trust it
+        else:
+            iso = IsotonicRegression(increasing=True, out_of_bounds="clip")
+            iso.fit(conf_b, benefit)
+            grid = np.linspace(conf_b.min(), conf_b.max(), 200)
+            crossing = np.where(iso.predict(grid) > 0)[0]
+            self.c_star_ = (float(grid[crossing[0]]) if len(crossing)
+                            else float(grid[-1]) + 1e-6)
         return self
 
     # -----------------------------------------------------------------
     def predict_weights(self, state_vector: pd.DataFrame) -> np.ndarray:
-        """Return one weight vector per row. Non-negative, rows sum to 1."""
-        n = len(state_vector)
+        X = np.asarray(state_vector, dtype=float)
+        n = len(X)
 
-        # ================= YOUR CODE STARTS HERE =====================
-        weights = np.tile(self.static_.weights_, (n, 1))
-        # =============================================================
+        if self.classifier_ is None:
+            weights = np.tile(self.static_.weights_, (n, 1))
+        else:
+            proba = self.classifier_.predict_proba(X)
+            conf = confidence_from_proba(proba, method=self.confidence_method)
+            W = self.cluster_weights_[np.asarray(self.classes_, dtype=int)]
+            w_route = proba @ W
+
+            denom = max(1.0 - self.c_star_, 1e-6)
+            lam = np.clip((conf - self.c_star_) / denom, 0.0, 1.0)[:, None]
+            weights = lam * w_route + (1.0 - lam) * self.static_.weights_[None, :]
 
         weights = np.clip(np.asarray(weights, dtype=float), 0, None)
         row = weights.sum(axis=1, keepdims=True)
