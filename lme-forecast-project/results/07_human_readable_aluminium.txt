@@ -1,0 +1,71 @@
+==========================================================================
+ALUMINIUM -- signal used nowhere
+==========================================================================
+Lower 'average error' is better. 'vs. safe blend' shows how much worse
+(+) or better (-) each method was than just not switching at all.
+
+  Method                                            Avg. error  vs. safe blend   Real difference?
+  -----------------------------------------------------------------------------------------------
+  Safe blend (no switching)                             10.183              --   -- (this is the baseline everything else is measured against)
+  Your algorithm (confidence-aware switcher)            10.221          +0.38%   no -- statistically just noise
+  Old switcher (always acts, ignores confidence)        10.280          +0.96%   no -- statistically just noise
+  Aggressive switcher (always acts, no caution)         11.044          +8.46%   YES -- a real, confirmed difference
+
+  If a switcher could read the market perfectly, the most it could gain here is 1.7%.
+  A switcher needs to correctly identify the market condition about 81% of the time before switching is worth it at all.
+
+  BOTTOM LINE: your algorithm is statistically tied with just not switching at all.
+
+==========================================================================
+ALUMINIUM -- signal fed to the prediction models
+==========================================================================
+Lower 'average error' is better. 'vs. safe blend' shows how much worse
+(+) or better (-) each method was than just not switching at all.
+
+  Method                                            Avg. error  vs. safe blend   Real difference?
+  -----------------------------------------------------------------------------------------------
+  Safe blend (no switching)                              9.971              --   -- (this is the baseline everything else is measured against)
+  Your algorithm (confidence-aware switcher)             9.978          +0.07%   no -- statistically just noise
+  Old switcher (always acts, ignores confidence)        10.086          +1.15%   no -- statistically just noise
+  Aggressive switcher (always acts, no caution)         10.503          +5.33%   YES -- a real, confirmed difference
+
+  If a switcher could read the market perfectly, the most it could gain here is 1.4%.
+  A switcher needs to correctly identify the market condition about 82% of the time before switching is worth it at all.
+
+  BOTTOM LINE: your algorithm is statistically tied with just not switching at all.
+
+==========================================================================
+ALUMINIUM -- signal fed to the switcher
+==========================================================================
+Lower 'average error' is better. 'vs. safe blend' shows how much worse
+(+) or better (-) each method was than just not switching at all.
+
+  Method                                            Avg. error  vs. safe blend   Real difference?
+  -----------------------------------------------------------------------------------------------
+  Your algorithm (confidence-aware switcher)            10.182          -0.01%   no -- statistically just noise
+  Safe blend (no switching)                             10.183              --   -- (this is the baseline everything else is measured against)
+  Old switcher (always acts, ignores confidence)        10.266          +0.82%   no -- statistically just noise
+  Aggressive switcher (always acts, no caution)         10.840          +6.46%   YES -- a real, confirmed difference
+
+  If a switcher could read the market perfectly, the most it could gain here is 1.7%.
+  A switcher needs to correctly identify the market condition about 81% of the time before switching is worth it at all.
+
+  BOTTOM LINE: your algorithm is statistically tied with just not switching at all.
+
+==========================================================================
+ALUMINIUM -- signal fed to both
+==========================================================================
+Lower 'average error' is better. 'vs. safe blend' shows how much worse
+(+) or better (-) each method was than just not switching at all.
+
+  Method                                            Avg. error  vs. safe blend   Real difference?
+  -----------------------------------------------------------------------------------------------
+  Your algorithm (confidence-aware switcher)             9.967          -0.04%   no -- statistically just noise
+  Safe blend (no switching)                              9.971              --   -- (this is the baseline everything else is measured against)
+  Old switcher (always acts, ignores confidence)        10.087          +1.16%   no -- statistically just noise
+  Aggressive switcher (always acts, no caution)         10.399          +4.29%   YES -- a real, confirmed difference
+
+  If a switcher could read the market perfectly, the most it could gain here is 1.4%.
+  A switcher needs to correctly identify the market condition about 82% of the time before switching is worth it at all.
+
+  BOTTOM LINE: your algorithm is statistically tied with just not switching at all.
