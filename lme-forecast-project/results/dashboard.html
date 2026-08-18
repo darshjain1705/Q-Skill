@@ -1,0 +1,577 @@
+<title>LME Metals Forecast Dashboard</title>
+<style>
+  :root{
+    color-scheme: light;
+    --ground:#f4f4f2;
+    --surface:#fcfcfb;
+    --sunk:#ececea;
+    --line:#dcdcd8;
+    --line-soft:#e8e8e4;
+    --grid:#e4e4e0;
+    --ink:#0b0b0b;
+    --ink-mid:#52514e;
+    --ink-soft:#7a7975;
+    --series-actual:#2a78d6;
+    --series-model:#eb6834;
+    --band:rgba(42,120,214,.14);
+    --good:#1f6b45;
+    --good-soft:#e2efe7;
+    --warn:#8a6410;
+    --warn-soft:#f7eedb;
+    --crit:#a33a2c;
+    --crit-soft:#f7e5e1;
+    --accent:#2a78d6;
+    --accent-soft:#e6eff9;
+    --shadow:0 1px 2px rgba(11,11,11,.05),0 8px 24px -18px rgba(11,11,11,.3);
+    --sans:"Helvetica Neue",Helvetica,"Liberation Sans",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --ground:#121211;
+      --surface:#1a1a19;
+      --sunk:#232322;
+      --line:#33332f;
+      --line-soft:#2a2a28;
+      --grid:#2c2c29;
+      --ink:#ffffff;
+      --ink-mid:#c3c2b7;
+      --ink-soft:#94938a;
+      --series-actual:#3987e5;
+      --series-model:#d95926;
+      --band:rgba(57,135,229,.20);
+      --good:#7cbf98;
+      --good-soft:#1b2a22;
+      --warn:#d8ae5a;
+      --warn-soft:#2e2718;
+      --crit:#e08574;
+      --crit-soft:#33211d;
+      --accent:#3987e5;
+      --accent-soft:#16273a;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -18px rgba(0,0,0,.85);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --ground:#121211;
+    --surface:#1a1a19;
+    --sunk:#232322;
+    --line:#33332f;
+    --line-soft:#2a2a28;
+    --grid:#2c2c29;
+    --ink:#ffffff;
+    --ink-mid:#c3c2b7;
+    --ink-soft:#94938a;
+    --series-actual:#3987e5;
+    --series-model:#d95926;
+    --band:rgba(57,135,229,.20);
+    --good:#7cbf98;
+    --good-soft:#1b2a22;
+    --warn:#d8ae5a;
+    --warn-soft:#2e2718;
+    --crit:#e08574;
+    --crit-soft:#33211d;
+    --accent:#3987e5;
+    --accent-soft:#16273a;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -18px rgba(0,0,0,.85);
+  }
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .viz-root{background:var(--ground);min-height:100vh;padding:0 20px 80px;
+    font-family:var(--sans);color:var(--ink);}
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  header.top{padding:40px 0 22px;border-bottom:1px solid var(--line);margin-bottom:26px;}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 12px;}
+  h1{font-size:clamp(26px,4.2vw,36px);font-weight:700;letter-spacing:-.02em;margin:0 0 10px;line-height:1.1;}
+  .sub{font-size:16px;color:var(--ink-mid);margin:0 0 20px;max-width:70ch;}
+  .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft);display:flex;
+    flex-wrap:wrap;gap:6px 20px;}
+
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 26px;}
+  .controls .lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-soft);margin-right:4px;}
+  button.tab{font-family:var(--sans);font-size:14px;font-weight:600;padding:8px 18px;
+    border:1px solid var(--line);background:var(--surface);color:var(--ink-mid);
+    border-radius:3px;cursor:pointer;transition:background .12s,color .12s,border-color .12s;}
+  button.tab:hover{border-color:var(--accent);color:var(--ink);}
+  button.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 30px;}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+    padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;}
+  .tile .k{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft);}
+  .tile .v{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1;
+    font-variant-numeric:tabular-nums;font-family:var(--mono);}
+  .tile .v.sm{font-size:17px;line-height:1.2;font-family:var(--sans);letter-spacing:-.01em;}
+  .tile .n{font-size:12.5px;color:var(--ink-mid);line-height:1.4;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+    padding:22px 24px;box-shadow:var(--shadow);margin:0 0 22px;}
+  .card h2{font-size:17px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;}
+  .card .cap{font-size:13.5px;color:var(--ink-mid);margin:0 0 18px;max-width:80ch;}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 12px;font-size:13px;color:var(--ink-mid);}
+  .legend .item{display:flex;align-items:center;gap:7px;}
+  .swatch{width:14px;height:3px;border-radius:2px;flex-shrink:0;}
+  .swatch.band{height:11px;border-radius:2px;}
+  .swatch.dash{background:none;border-top:3px dashed currentColor;height:0;}
+
+  .chartbox{position:relative;width:100%;}
+  svg.chart{display:block;width:100%;height:auto;overflow:visible;}
+  .gridline{stroke:var(--grid);stroke-width:1;}
+  .axislbl{font-family:var(--mono);font-size:10.5px;fill:var(--ink-soft);}
+  .axtitle{font-family:var(--sans);font-size:11px;font-weight:600;fill:var(--ink-soft);
+    letter-spacing:.06em;text-transform:uppercase;}
+  .divider{stroke:var(--ink-soft);stroke-width:1;stroke-dasharray:3 3;opacity:.6;}
+  .divlbl{font-family:var(--sans);font-size:10.5px;font-weight:700;fill:var(--ink-soft);
+    letter-spacing:.08em;text-transform:uppercase;}
+
+  .tip{position:absolute;pointer-events:none;background:var(--surface);
+    border:1px solid var(--line);border-radius:4px;padding:9px 12px;font-size:12.5px;
+    box-shadow:var(--shadow);opacity:0;transition:opacity .1s;z-index:5;white-space:nowrap;}
+  .tip .td{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:4px;}
+  .tip .tr{display:flex;align-items:center;gap:7px;line-height:1.5;}
+  .tip .tv{font-family:var(--mono);font-variant-numeric:tabular-nums;margin-left:auto;
+    padding-left:14px;font-weight:600;}
+
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--surface);}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;}
+  th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
+  thead th{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-soft);background:var(--sunk);border-bottom:1px solid var(--line);}
+  tbody tr:last-child td{border-bottom:none;}
+  td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;}
+  tr.base td{background:var(--sunk);font-weight:600;}
+  .bar{display:inline-block;height:7px;border-radius:2px;background:var(--series-model);vertical-align:middle;}
+  .bar.better{background:var(--good);}
+
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;padding:3px 8px;border-radius:3px;white-space:nowrap;}
+  .pill-good{background:var(--good-soft);color:var(--good);}
+  .pill-warn{background:var(--warn-soft);color:var(--warn);}
+  .pill-crit{background:var(--crit-soft);color:var(--crit);}
+  .pill-info{background:var(--accent-soft);color:var(--accent);}
+
+  .note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--warn);
+    border-radius:4px;padding:18px 20px;margin:0 0 22px;box-shadow:var(--shadow);}
+  .note.good{border-left-color:var(--good);}
+  .note h3{font-size:15px;font-weight:700;margin:0 0 8px;}
+  .note p{margin:0 0 10px;font-size:14px;color:var(--ink-mid);}
+  .note p:last-child{margin-bottom:0;}
+  .note strong{color:var(--ink);}
+
+  footer.foot{border-top:1px solid var(--line);padding-top:18px;margin-top:8px;
+    font-size:12.5px;color:var(--ink-soft);line-height:1.55;}
+  @media (max-width:640px){
+    .viz-root{padding:0 14px 60px;}
+    .card{padding:16px 15px;}
+    .tile{padding:13px 15px;}
+  }
+</style>
+
+<div class="viz-root">
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">Live from real market data</p>
+  <h1>LME Metals Forecast Dashboard</h1>
+  <p class="sub">Ten years of real daily zinc and aluminium prices, the model's forecasts tested against what actually happened, and an honest read on whether any of it beats simply guessing "tomorrow looks like today."</p>
+  <div class="meta">
+    <span id="meta-rows"></span>
+    <span id="meta-span"></span>
+    <span>Source: Investing.com daily settlement prices</span>
+  </div>
+</header>
+
+<div class="controls">
+  <span class="lbl">Metal</span>
+  <button class="tab" id="tab-zinc" role="tab" aria-selected="true" onclick="selectMetal('zinc')">Zinc</button>
+  <button class="tab" id="tab-aluminium" role="tab" aria-selected="false" onclick="selectMetal('aluminium')">Aluminium</button>
+</div>
+
+<div class="tiles" id="tiles"></div>
+
+<div class="card">
+  <h2 id="t-forecast">Recent prices and the next 10 trading days</h2>
+  <p class="cap">The solid line is what actually happened. The shaded cone is where the model thinks the price goes next — the cone widens because uncertainty compounds with every day forward.</p>
+  <div class="legend">
+    <span class="item"><span class="swatch" style="background:var(--series-actual)"></span>Actual price</span>
+    <span class="item"><span class="swatch" style="background:var(--series-model)"></span>Model's projection</span>
+    <span class="item"><span class="swatch band" style="background:var(--band)"></span>Range the price will land in 80% of the time</span>
+  </div>
+  <div class="chartbox" id="box-forecast">
+    <svg class="chart" id="svg-forecast" viewBox="0 0 900 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Recent price history and 10-day forward projection"></svg>
+    <div class="tip" id="tip-forecast"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 id="t-backtest">Did the model actually get it right? Last 60 trading days</h2>
+  <p class="cap">A fair test: the model was trained only on data before this window, then asked to predict each day one step ahead. Blue is reality, orange is what the model said would happen.</p>
+  <div class="legend">
+    <span class="item"><span class="swatch" style="background:var(--series-actual)"></span>What actually happened</span>
+    <span class="item"><span class="swatch" style="background:var(--series-model)"></span>What the model predicted</span>
+  </div>
+  <div class="chartbox" id="box-backtest">
+    <svg class="chart" id="svg-backtest" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Actual versus predicted prices over the last 60 trading days"></svg>
+    <div class="tip" id="tip-backtest"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Which method performed best?</h2>
+  <p class="cap">Every method scored on the same 60-day test. The bar shows error relative to simply guessing no change — shorter is better, and anything past the line at 1.0 is worse than doing nothing at all.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr>
+        <th>Method</th>
+        <th class="num">Error vs. doing nothing</th>
+        <th style="min-width:170px">&nbsp;</th>
+        <th class="num">Right direction</th>
+        <th>Real difference?</th>
+      </tr></thead>
+      <tbody id="board"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="verdict"></div>
+
+<footer class="foot">
+  All figures computed from real daily settlement prices via walk-forward testing — the model never sees future data when making a prediction. "Right direction" is how often the model correctly called up versus down. "Real difference?" reports a Diebold–Mariano test against the random-walk benchmark; p &lt; 0.05 means the gap is unlikely to be chance. The forward projection is shown with an 80% uncertainty band and is not investment advice.
+</footer>
+
+</div>
+</div>
+
+<script>
+const DATA = {"aluminium":{"metal":"aluminium","rows":2674,"start":"2016-01-04","end":"2026-07-31","last_price":3194.65,"history":[{"date":"2026-02-10","price":3101.5},{"date":"2026-02-11","price":3119.85},{"date":"2026-02-12","price":3097.15},{"date":"2026-02-13","price":3095.75},{"date":"2026-02-16","price":3045.3},{"date":"2026-02-17","price":3040.3},{"date":"2026-02-18","price":3084.5},{"date":"2026-02-19","price":3071.85},{"date":"2026-02-20","price":3101.9},{"date":"2026-02-23","price":3092.75},{"date":"2026-02-24","price":3110.9},{"date":"2026-02-25","price":3175.4},{"date":"2026-02-26","price":3148.1},{"date":"2026-02-27","price":3146.9},{"date":"2026-03-02","price":3194.45},{"date":"2026-03-03","price":3277.5},{"date":"2026-03-04","price":3333.5},{"date":"2026-03-05","price":3279.95},{"date":"2026-03-06","price":3425.9},{"date":"2026-03-09","price":3384.45},{"date":"2026-03-10","price":3393.0},{"date":"2026-03-11","price":3446.0},{"date":"2026-03-12","price":3519.35},{"date":"2026-03-13","price":3420.0},{"date":"2026-03-16","price":3391.2},{"date":"2026-03-17","price":3369.6},{"date":"2026-03-18","price":3415.18},{"date":"2026-03-19","price":3242.0},{"date":"2026-03-20","price":3194.95},{"date":"2026-03-23","price":3227.5},{"date":"2026-03-24","price":3239.5},{"date":"2026-03-25","price":3245.5},{"date":"2026-03-26","price":3248.95},{"date":"2026-03-27","price":3275.2},{"date":"2026-03-30","price":3431.5},{"date":"2026-03-31","price":3429.55},{"date":"2026-04-01","price":3523.8},{"date":"2026-04-02","price":3468.5},{"date":"2026-04-07","price":3464.5},{"date":"2026-04-08","price":3478.0},{"date":"2026-04-09","price":3446.6},{"date":"2026-04-10","price":3511.25},{"date":"2026-04-13","price":3626.75},{"date":"2026-04-14","price":3584.0},{"date":"2026-04-15","price":3620.15},{"date":"2026-04-16","price":3644.45},{"date":"2026-04-17","price":3557.0},{"date":"2026-04-20","price":3555.0},{"date":"2026-04-21","price":3532.5},{"date":"2026-04-22","price":3629.0},{"date":"2026-04-23","price":3619.52},{"date":"2026-04-24","price":3603.0},{"date":"2026-04-27","price":3580.8},{"date":"2026-04-28","price":3539.5},{"date":"2026-04-29","price":3481.4},{"date":"2026-04-30","price":3483.5},{"date":"2026-05-01","price":3518.4},{"date":"2026-05-05","price":3575.75},{"date":"2026-05-06","price":3526.0},{"date":"2026-05-07","price":3483.23},{"date":"2026-05-08","price":3503.05},{"date":"2026-05-11","price":3578.45},{"date":"2026-05-12","price":3575.2},{"date":"2026-05-13","price":3653.85},{"date":"2026-05-14","price":3653.0},{"date":"2026-05-15","price":3564.0},{"date":"2026-05-18","price":3561.65},{"date":"2026-05-19","price":3596.0},{"date":"2026-05-20","price":3631.35},{"date":"2026-05-21","price":3638.05},{"date":"2026-05-22","price":3650.9},{"date":"2026-05-26","price":3678.55},{"date":"2026-05-27","price":3627.0},{"date":"2026-05-28","price":3673.65},{"date":"2026-05-29","price":3675.0},{"date":"2026-06-01","price":3731.95},{"date":"2026-06-02","price":3762.0},{"date":"2026-06-03","price":3700.05},{"date":"2026-06-04","price":3667.6},{"date":"2026-06-05","price":3598.5},{"date":"2026-06-08","price":3594.2},{"date":"2026-06-09","price":3525.9},{"date":"2026-06-10","price":3475.5},{"date":"2026-06-11","price":3518.48},{"date":"2026-06-12","price":3543.0},{"date":"2026-06-15","price":3375.65},{"date":"2026-06-16","price":3393.85},{"date":"2026-06-17","price":3422.35},{"date":"2026-06-18","price":3399.45},{"date":"2026-06-19","price":3400.85},{"date":"2026-06-22","price":3362.6},{"date":"2026-06-23","price":3258.2},{"date":"2026-06-24","price":3119.0},{"date":"2026-06-25","price":3173.25},{"date":"2026-06-26","price":3199.0},{"date":"2026-06-29","price":3099.8},{"date":"2026-06-30","price":3098.15},{"date":"2026-07-01","price":3097.35},{"date":"2026-07-02","price":3085.45},{"date":"2026-07-03","price":3093.3},{"date":"2026-07-06","price":3111.25},{"date":"2026-07-07","price":3141.0},{"date":"2026-07-08","price":3141.0},{"date":"2026-07-09","price":3209.0},{"date":"2026-07-10","price":3146.35},{"date":"2026-07-13","price":3155.65},{"date":"2026-07-14","price":3175.6},{"date":"2026-07-15","price":3147.5},{"date":"2026-07-16","price":3178.4},{"date":"2026-07-17","price":3164.65},{"date":"2026-07-20","price":3137.5},{"date":"2026-07-21","price":3166.2},{"date":"2026-07-22","price":3190.55},{"date":"2026-07-23","price":3191.55},{"date":"2026-07-24","price":3165.05},{"date":"2026-07-27","price":3171.0},{"date":"2026-07-28","price":3148.6},{"date":"2026-07-29","price":3178.6},{"date":"2026-07-30","price":3194.0},{"date":"2026-07-31","price":3194.65}],"backtest":[{"date":"2026-05-07","actual":3503.05,"predicted":3484.59},{"date":"2026-05-08","actual":3578.45,"predicted":3506.21},{"date":"2026-05-11","actual":3575.2,"predicted":3588.06},{"date":"2026-05-12","actual":3653.85,"predicted":3574.59},{"date":"2026-05-13","actual":3653.0,"predicted":3659.66},{"date":"2026-05-14","actual":3564.0,"predicted":3655.77},{"date":"2026-05-15","actual":3561.65,"predicted":3562.72},{"date":"2026-05-18","actual":3596.0,"predicted":3560.99},{"date":"2026-05-19","actual":3631.35,"predicted":3594.84},{"date":"2026-05-20","actual":3638.05,"predicted":3632.4},{"date":"2026-05-21","actual":3650.9,"predicted":3642.74},{"date":"2026-05-22","actual":3678.55,"predicted":3652.48},{"date":"2026-05-26","actual":3627.0,"predicted":3680.36},{"date":"2026-05-27","actual":3673.65,"predicted":3624.87},{"date":"2026-05-28","actual":3675.0,"predicted":3676.54},{"date":"2026-05-29","actual":3731.95,"predicted":3677.12},{"date":"2026-06-01","actual":3762.0,"predicted":3738.3},{"date":"2026-06-02","actual":3700.05,"predicted":3762.27},{"date":"2026-06-03","actual":3667.6,"predicted":3699.63},{"date":"2026-06-04","actual":3598.5,"predicted":3667.32},{"date":"2026-06-05","actual":3594.2,"predicted":3599.04},{"date":"2026-06-08","actual":3525.9,"predicted":3597.41},{"date":"2026-06-09","actual":3475.5,"predicted":3522.82},{"date":"2026-06-10","actual":3518.48,"predicted":3474.63},{"date":"2026-06-11","actual":3543.0,"predicted":3517.8},{"date":"2026-06-12","actual":3375.65,"predicted":3543.25},{"date":"2026-06-15","actual":3393.85,"predicted":3368.91},{"date":"2026-06-16","actual":3422.35,"predicted":3395.28},{"date":"2026-06-17","actual":3399.45,"predicted":3420.49},{"date":"2026-06-18","actual":3400.85,"predicted":3396.46},{"date":"2026-06-19","actual":3362.6,"predicted":3397.89},{"date":"2026-06-22","actual":3258.2,"predicted":3360.59},{"date":"2026-06-23","actual":3119.0,"predicted":3255.76},{"date":"2026-06-24","actual":3173.25,"predicted":3112.14},{"date":"2026-06-25","actual":3199.0,"predicted":3175.21},{"date":"2026-06-26","actual":3099.8,"predicted":3200.02},{"date":"2026-06-29","actual":3098.15,"predicted":3096.34},{"date":"2026-06-30","actual":3097.35,"predicted":3091.27},{"date":"2026-07-01","actual":3085.45,"predicted":3100.0},{"date":"2026-07-02","actual":3093.3,"predicted":3075.5},{"date":"2026-07-03","actual":3111.25,"predicted":3092.49},{"date":"2026-07-06","actual":3141.0,"predicted":3115.22},{"date":"2026-07-07","actual":3141.0,"predicted":3142.72},{"date":"2026-07-08","actual":3209.0,"predicted":3143.7},{"date":"2026-07-09","actual":3146.35,"predicted":3214.57},{"date":"2026-07-10","actual":3155.65,"predicted":3143.14},{"date":"2026-07-13","actual":3175.6,"predicted":3156.45},{"date":"2026-07-14","actual":3147.5,"predicted":3179.13},{"date":"2026-07-15","actual":3178.4,"predicted":3147.5},{"date":"2026-07-16","actual":3164.65,"predicted":3184.02},{"date":"2026-07-17","actual":3137.5,"predicted":3165.35},{"date":"2026-07-20","actual":3166.2,"predicted":3136.66},{"date":"2026-07-21","actual":3190.55,"predicted":3164.78},{"date":"2026-07-22","actual":3191.55,"predicted":3191.66},{"date":"2026-07-23","actual":3165.05,"predicted":3191.08},{"date":"2026-07-24","actual":3171.0,"predicted":3163.99},{"date":"2026-07-27","actual":3148.6,"predicted":3172.53},{"date":"2026-07-28","actual":3178.6,"predicted":3149.51},{"date":"2026-07-29","actual":3194.0,"predicted":3180.35},{"date":"2026-07-30","actual":3194.65,"predicted":3197.55}],"projection":[{"date":"2026-08-03","central":3196.83,"lo":3138.19,"hi":3256.55},{"date":"2026-08-04","central":3197.37,"lo":3114.75,"hi":3282.18},{"date":"2026-08-05","central":3197.94,"lo":3097.03,"hi":3302.13},{"date":"2026-08-06","central":3202.66,"lo":3086.25,"hi":3323.45},{"date":"2026-08-07","central":3207.24,"lo":3077.19,"hi":3342.78},{"date":"2026-08-10","central":3210.73,"lo":3068.39,"hi":3359.67},{"date":"2026-08-11","central":3212.9,"lo":3059.33,"hi":3374.17},{"date":"2026-08-12","central":3217.46,"lo":3053.33,"hi":3390.41},{"date":"2026-08-13","central":3221.56,"lo":3047.53,"hi":3405.53},{"date":"2026-08-14","central":3225.66,"lo":3042.25,"hi":3420.12}],"leaderboard":[{"name":"Doing nothing (random walk)","relmae":1.0,"mae_pct":1.0376,"diracc":null,"p_vs_rw":null,"is_baseline":true},{"name":"Statistical model (ARIMA)","relmae":1.0039,"mae_pct":1.0417,"diracc":0.5424,"p_vs_rw":0.6143,"is_baseline":false},{"name":"Linear model","relmae":1.0186,"mae_pct":1.0569,"diracc":0.4576,"p_vs_rw":0.0867,"is_baseline":false},{"name":"Combined model","relmae":1.0227,"mae_pct":1.0612,"diracc":0.4915,"p_vs_rw":0.0628,"is_baseline":false},{"name":"Tree model (XGBoost)","relmae":1.0544,"mae_pct":1.0941,"diracc":0.5763,"p_vs_rw":0.3288,"is_baseline":false},{"name":"Simple average","relmae":1.1074,"mae_pct":1.1491,"diracc":0.4407,"p_vs_rw":0.0311,"is_baseline":false},{"name":"Neural network","relmae":1.5365,"mae_pct":1.5943,"diracc":0.3898,"p_vs_rw":0.0004,"is_baseline":false}],"backtest_days":60,"typical_daily_move_pct":1.038},"zinc":{"metal":"zinc","rows":2686,"start":"2016-01-04","end":"2026-08-18","last_price":3695.9,"history":[{"date":"2026-02-26","price":3372.8},{"date":"2026-02-27","price":3319.75},{"date":"2026-03-02","price":3322.15},{"date":"2026-03-03","price":3273.0},{"date":"2026-03-04","price":3321.15},{"date":"2026-03-05","price":3236.6},{"date":"2026-03-06","price":3302.05},{"date":"2026-03-09","price":3325.5},{"date":"2026-03-10","price":3345.7},{"date":"2026-03-11","price":3309.05},{"date":"2026-03-12","price":3316.5},{"date":"2026-03-13","price":3290.3},{"date":"2026-03-16","price":3270.45},{"date":"2026-03-17","price":3231.65},{"date":"2026-03-18","price":3141.45},{"date":"2026-03-19","price":3071.25},{"date":"2026-03-20","price":3073.4},{"date":"2026-03-23","price":3092.7},{"date":"2026-03-24","price":3044.15},{"date":"2026-03-25","price":3095.15},{"date":"2026-03-26","price":3087.25},{"date":"2026-03-27","price":3118.55},{"date":"2026-03-30","price":3200.55},{"date":"2026-03-31","price":3234.3},{"date":"2026-04-01","price":3306.5},{"date":"2026-04-02","price":3263.1},{"date":"2026-04-07","price":3315.1},{"date":"2026-04-08","price":3293.25},{"date":"2026-04-09","price":3331.45},{"date":"2026-04-10","price":3326.6},{"date":"2026-04-13","price":3319.95},{"date":"2026-04-14","price":3343.6},{"date":"2026-04-15","price":3397.25},{"date":"2026-04-16","price":3425.4},{"date":"2026-04-17","price":3436.2},{"date":"2026-04-20","price":3412.4},{"date":"2026-04-21","price":3450.85},{"date":"2026-04-22","price":3471.45},{"date":"2026-04-23","price":3463.0},{"date":"2026-04-24","price":3476.45},{"date":"2026-04-27","price":3399.6},{"date":"2026-04-28","price":3371.15},{"date":"2026-04-29","price":3316.2},{"date":"2026-04-30","price":3368.4},{"date":"2026-05-01","price":3340.45},{"date":"2026-05-05","price":3369.3},{"date":"2026-05-06","price":3409.45},{"date":"2026-05-07","price":3451.1},{"date":"2026-05-08","price":3429.2},{"date":"2026-05-11","price":3477.35},{"date":"2026-05-12","price":3526.95},{"date":"2026-05-13","price":3559.35},{"date":"2026-05-14","price":3584.65},{"date":"2026-05-15","price":3528.75},{"date":"2026-05-18","price":3524.1},{"date":"2026-05-19","price":3511.55},{"date":"2026-05-20","price":3561.85},{"date":"2026-05-21","price":3521.35},{"date":"2026-05-22","price":3541.8},{"date":"2026-05-26","price":3535.25},{"date":"2026-05-27","price":3518.3},{"date":"2026-05-28","price":3561.2},{"date":"2026-05-29","price":3534.4},{"date":"2026-06-01","price":3572.15},{"date":"2026-06-02","price":3640.95},{"date":"2026-06-03","price":3592.6},{"date":"2026-06-04","price":3587.25},{"date":"2026-06-05","price":3526.15},{"date":"2026-06-08","price":3537.2},{"date":"2026-06-09","price":3544.05},{"date":"2026-06-10","price":3481.65},{"date":"2026-06-11","price":3494.45},{"date":"2026-06-12","price":3578.25},{"date":"2026-06-15","price":3584.35},{"date":"2026-06-16","price":3565.6},{"date":"2026-06-17","price":3603.05},{"date":"2026-06-18","price":3640.8},{"date":"2026-06-19","price":3563.45},{"date":"2026-06-22","price":3610.35},{"date":"2026-06-23","price":3498.85},{"date":"2026-06-24","price":3418.25},{"date":"2026-06-25","price":3443.85},{"date":"2026-06-26","price":3502.85},{"date":"2026-06-29","price":3486.7},{"date":"2026-06-30","price":3558.3},{"date":"2026-07-01","price":3505.25},{"date":"2026-07-02","price":3486.25},{"date":"2026-07-03","price":3549.6},{"date":"2026-07-06","price":3583.15},{"date":"2026-07-07","price":3574.85},{"date":"2026-07-08","price":3530.1},{"date":"2026-07-09","price":3629.0},{"date":"2026-07-10","price":3614.3},{"date":"2026-07-13","price":3565.7},{"date":"2026-07-14","price":3595.9},{"date":"2026-07-15","price":3548.45},{"date":"2026-07-16","price":3581.1},{"date":"2026-07-17","price":3524.8},{"date":"2026-07-20","price":3514.75},{"date":"2026-07-21","price":3552.6},{"date":"2026-07-22","price":3592.85},{"date":"2026-07-23","price":3585.85},{"date":"2026-07-24","price":3589.65},{"date":"2026-07-27","price":3618.3},{"date":"2026-07-28","price":3578.3},{"date":"2026-07-29","price":3575.8},{"date":"2026-07-30","price":3617.5},{"date":"2026-07-31","price":3645.5},{"date":"2026-08-03","price":3636.35},{"date":"2026-08-04","price":3666.9},{"date":"2026-08-05","price":3729.1},{"date":"2026-08-06","price":3761.55},{"date":"2026-08-07","price":3697.35},{"date":"2026-08-10","price":3734.45},{"date":"2026-08-11","price":3730.65},{"date":"2026-08-12","price":3737.25},{"date":"2026-08-13","price":3737.45},{"date":"2026-08-14","price":3758.25},{"date":"2026-08-17","price":3760.8},{"date":"2026-08-18","price":3695.9}],"backtest":[{"date":"2026-05-26","actual":3518.3,"predicted":3540.4},{"date":"2026-05-27","actual":3561.2,"predicted":3514.5},{"date":"2026-05-28","actual":3534.4,"predicted":3548.36},{"date":"2026-05-29","actual":3572.15,"predicted":3542.78},{"date":"2026-06-01","actual":3640.95,"predicted":3584.47},{"date":"2026-06-02","actual":3592.6,"predicted":3633.84},{"date":"2026-06-03","actual":3587.25,"predicted":3597.62},{"date":"2026-06-04","actual":3526.15,"predicted":3579.4},{"date":"2026-06-05","actual":3537.2,"predicted":3543.52},{"date":"2026-06-08","actual":3544.05,"predicted":3536.72},{"date":"2026-06-09","actual":3481.65,"predicted":3544.39},{"date":"2026-06-10","actual":3494.45,"predicted":3499.86},{"date":"2026-06-11","actual":3578.25,"predicted":3497.23},{"date":"2026-06-12","actual":3584.35,"predicted":3594.3},{"date":"2026-06-15","actual":3565.6,"predicted":3590.39},{"date":"2026-06-16","actual":3603.05,"predicted":3559.88},{"date":"2026-06-17","actual":3640.8,"predicted":3608.11},{"date":"2026-06-18","actual":3563.45,"predicted":3651.26},{"date":"2026-06-19","actual":3610.35,"predicted":3568.26},{"date":"2026-06-22","actual":3498.85,"predicted":3603.39},{"date":"2026-06-23","actual":3418.25,"predicted":3487.33},{"date":"2026-06-24","actual":3443.85,"predicted":3398.75},{"date":"2026-06-25","actual":3502.85,"predicted":3446.69},{"date":"2026-06-26","actual":3486.7,"predicted":3486.19},{"date":"2026-06-29","actual":3558.3,"predicted":3485.95},{"date":"2026-06-30","actual":3505.25,"predicted":3568.65},{"date":"2026-07-01","actual":3486.25,"predicted":3519.05},{"date":"2026-07-02","actual":3549.6,"predicted":3465.48},{"date":"2026-07-03","actual":3583.15,"predicted":3569.37},{"date":"2026-07-06","actual":3574.85,"predicted":3585.14},{"date":"2026-07-07","actual":3530.1,"predicted":3581.92},{"date":"2026-07-08","actual":3629.0,"predicted":3542.12},{"date":"2026-07-09","actual":3614.3,"predicted":3629.1},{"date":"2026-07-10","actual":3565.7,"predicted":3619.7},{"date":"2026-07-13","actual":3595.9,"predicted":3576.56},{"date":"2026-07-14","actual":3548.45,"predicted":3608.77},{"date":"2026-07-15","actual":3581.1,"predicted":3550.05},{"date":"2026-07-16","actual":3524.8,"predicted":3571.81},{"date":"2026-07-17","actual":3514.75,"predicted":3543.39},{"date":"2026-07-20","actual":3552.6,"predicted":3513.96},{"date":"2026-07-21","actual":3592.85,"predicted":3562.93},{"date":"2026-07-22","actual":3585.85,"predicted":3593.94},{"date":"2026-07-23","actual":3589.65,"predicted":3577.39},{"date":"2026-07-24","actual":3618.3,"predicted":3590.8},{"date":"2026-07-27","actual":3578.3,"predicted":3612.34},{"date":"2026-07-28","actual":3575.8,"predicted":3576.58},{"date":"2026-07-29","actual":3617.5,"predicted":3564.93},{"date":"2026-07-30","actual":3645.5,"predicted":3626.95},{"date":"2026-07-31","actual":3636.35,"predicted":3655.07},{"date":"2026-08-03","actual":3666.9,"predicted":3647.45},{"date":"2026-08-04","actual":3729.1,"predicted":3675.92},{"date":"2026-08-05","actual":3761.55,"predicted":3714.68},{"date":"2026-08-06","actual":3697.35,"predicted":3769.57},{"date":"2026-08-07","actual":3734.45,"predicted":3698.06},{"date":"2026-08-10","actual":3730.65,"predicted":3725.72},{"date":"2026-08-11","actual":3737.25,"predicted":3727.42},{"date":"2026-08-12","actual":3737.45,"predicted":3745.22},{"date":"2026-08-13","actual":3758.25,"predicted":3729.75},{"date":"2026-08-14","actual":3760.8,"predicted":3735.18},{"date":"2026-08-17","actual":3695.9,"predicted":3797.23}],"projection":[{"date":"2026-08-19","central":3676.77,"lo":3616.72,"hi":3737.81},{"date":"2026-08-20","central":3672.83,"lo":3588.29,"hi":3759.36},{"date":"2026-08-21","central":3673.63,"lo":3570.34,"hi":3779.92},{"date":"2026-08-24","central":3694.17,"lo":3574.5,"hi":3817.86},{"date":"2026-08-25","central":3708.0,"lo":3573.96,"hi":3847.08},{"date":"2026-08-26","central":3732.34,"lo":3584.8,"hi":3885.96},{"date":"2026-08-27","central":3727.15,"lo":3568.26,"hi":3893.12},{"date":"2026-08-28","central":3742.31,"lo":3572.02,"hi":3920.73},{"date":"2026-08-31","central":3762.62,"lo":3581.26,"hi":3953.16},{"date":"2026-09-01","central":3790.1,"lo":3597.8,"hi":3992.69}],"leaderboard":[{"name":"Linear model","relmae":0.9937,"mae_pct":1.0178,"diracc":0.5833,"p_vs_rw":0.3609,"is_baseline":false},{"name":"Statistical model (ARIMA)","relmae":0.9963,"mae_pct":1.0205,"diracc":0.5833,"p_vs_rw":0.3527,"is_baseline":false},{"name":"Doing nothing (random walk)","relmae":1.0,"mae_pct":1.0242,"diracc":null,"p_vs_rw":null,"is_baseline":true},{"name":"Tree model (XGBoost)","relmae":1.0306,"mae_pct":1.0556,"diracc":0.5,"p_vs_rw":0.4131,"is_baseline":false},{"name":"Combined model","relmae":1.0306,"mae_pct":1.0556,"diracc":0.5,"p_vs_rw":0.4131,"is_baseline":false},{"name":"Simple average","relmae":1.0543,"mae_pct":1.0799,"diracc":0.4667,"p_vs_rw":0.2389,"is_baseline":false},{"name":"Neural network","relmae":1.4613,"mae_pct":1.4967,"diracc":0.4333,"p_vs_rw":0.0011,"is_baseline":false}],"backtest_days":60,"typical_daily_move_pct":1.024}};
+const NS = "http://www.w3.org/2000/svg";
+let METAL = "zinc";
+
+const fmtMoney = v => "$" + v.toLocaleString("en-US", {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtDate = s => {
+  const d = new Date(s + "T00:00:00");
+  return d.toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"2-digit"});
+};
+const fmtDateShort = s => {
+  const d = new Date(s + "T00:00:00");
+  return d.toLocaleDateString("en-GB", {day:"numeric", month:"short"});
+};
+
+function el(tag, attrs, parent){
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+
+function niceTicks(min, max, count){
+  const span = max - min;
+  if (span <= 0) return [min];
+  const raw = span / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1) * mag;
+  const out = [];
+  for (let v = Math.ceil(min/step)*step; v <= max + 1e-9; v += step) out.push(v);
+  return out;
+}
+
+/* ---------------- forecast chart: history + projection cone ---------- */
+function drawForecast(){
+  const d = DATA[METAL];
+  const svg = document.getElementById("svg-forecast");
+  const tip = document.getElementById("tip-forecast");
+  const box = document.getElementById("box-forecast");
+  clear(svg);
+
+  const W = 900, H = 340, ml = 62, mr = 22, mt = 16, mb = 42;
+  const iw = W - ml - mr, ih = H - mt - mb;
+
+  const hist = d.history.slice(-45);
+  const proj = d.projection;
+  const n = hist.length + proj.length;
+
+  let lo = Infinity, hi = -Infinity;
+  hist.forEach(p => { lo = Math.min(lo, p.price); hi = Math.max(hi, p.price); });
+  proj.forEach(p => { lo = Math.min(lo, p.lo); hi = Math.max(hi, p.hi); });
+  const pad = (hi - lo) * 0.10 || 10;
+  lo -= pad; hi += pad;
+
+  const X = i => ml + (i / (n - 1)) * iw;
+  const Y = v => mt + ih - ((v - lo) / (hi - lo)) * ih;
+
+  // grid + y labels
+  niceTicks(lo, hi, 5).forEach(t => {
+    el("line", {x1:ml, y1:Y(t), x2:ml+iw, y2:Y(t), class:"gridline"}, svg);
+    const lb = el("text", {x:ml-10, y:Y(t)+3.5, class:"axislbl", "text-anchor":"end"}, svg);
+    lb.textContent = fmtMoney(t);
+  });
+  const yt = el("text", {x:ml-10, y:mt-4, class:"axtitle", "text-anchor":"end"}, svg);
+  yt.textContent = "USD / tonne";
+
+  // x labels
+  const every = Math.ceil(n / 8);
+  for (let i = 0; i < n; i += every){
+    const lbl = i < hist.length ? hist[i].date : proj[i-hist.length].date;
+    const t = el("text", {x:X(i), y:mt+ih+20, class:"axislbl", "text-anchor":"middle"}, svg);
+    t.textContent = fmtDateShort(lbl);
+  }
+
+  // uncertainty band
+  const j = hist.length - 1;
+  const lastPrice = hist[j].price;
+  let bandTop = `M ${X(j)} ${Y(lastPrice)}`;
+  proj.forEach((p, k) => { bandTop += ` L ${X(j+1+k)} ${Y(p.hi)}`; });
+  for (let k = proj.length - 1; k >= 0; k--) bandTop += ` L ${X(j+1+k)} ${Y(proj[k].lo)}`;
+  bandTop += " Z";
+  el("path", {d:bandTop, fill:"var(--band)", stroke:"none"}, svg);
+
+  // divider between past and future
+  el("line", {x1:X(j), y1:mt, x2:X(j), y2:mt+ih, class:"divider"}, svg);
+  const dl = el("text", {x:X(j)+7, y:mt+12, class:"divlbl"}, svg);
+  dl.textContent = "PROJECTION →";
+
+  // actual line
+  let ap = "";
+  hist.forEach((p,i) => { ap += (i ? " L " : "M ") + X(i) + " " + Y(p.price); });
+  el("path", {d:ap, fill:"none", stroke:"var(--series-actual)", "stroke-width":2,
+              "stroke-linejoin":"round", "stroke-linecap":"round"}, svg);
+
+  // projection line
+  let pp = `M ${X(j)} ${Y(lastPrice)}`;
+  proj.forEach((p,k) => { pp += ` L ${X(j+1+k)} ${Y(p.central)}`; });
+  el("path", {d:pp, fill:"none", stroke:"var(--series-model)", "stroke-width":2,
+              "stroke-dasharray":"5 4", "stroke-linejoin":"round", "stroke-linecap":"round"}, svg);
+
+  // endpoint markers
+  el("circle", {cx:X(j), cy:Y(lastPrice), r:4.5, fill:"var(--series-actual)",
+                stroke:"var(--surface)", "stroke-width":2}, svg);
+  const lastP = proj[proj.length-1];
+  el("circle", {cx:X(n-1), cy:Y(lastP.central), r:4.5, fill:"var(--series-model)",
+                stroke:"var(--surface)", "stroke-width":2}, svg);
+
+  // hover
+  const hv = el("line", {x1:0,y1:mt,x2:0,y2:mt+ih, stroke:"var(--ink-soft)",
+                         "stroke-width":1, opacity:0}, svg);
+  const hit = el("rect", {x:ml, y:mt, width:iw, height:ih, fill:"transparent"}, svg);
+  hit.style.cursor = "crosshair";
+
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * W;
+    let i = Math.round((px - ml) / iw * (n - 1));
+    i = Math.max(0, Math.min(n-1, i));
+    hv.setAttribute("x1", X(i)); hv.setAttribute("x2", X(i)); hv.setAttribute("opacity", .45);
+
+    let html;
+    if (i < hist.length){
+      html = `<div class="td">${fmtDate(hist[i].date)}</div>
+        <div class="tr"><span class="swatch" style="background:var(--series-actual)"></span>
+        Actual<span class="tv">${fmtMoney(hist[i].price)}</span></div>`;
+    } else {
+      const p = proj[i - hist.length];
+      html = `<div class="td">${fmtDate(p.date)} &middot; projected</div>
+        <div class="tr"><span class="swatch" style="background:var(--series-model)"></span>
+        Central<span class="tv">${fmtMoney(p.central)}</span></div>
+        <div class="tr"><span class="swatch band" style="background:var(--band)"></span>
+        Likely range<span class="tv">${fmtMoney(p.lo)} – ${fmtMoney(p.hi)}</span></div>`;
+    }
+    tip.innerHTML = html;
+    tip.style.opacity = 1;
+    const bw = box.clientWidth, scale = bw / W;
+    let left = X(i) * scale + 14;
+    if (left + tip.offsetWidth > bw) left = X(i)*scale - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = "18px";
+  });
+  hit.addEventListener("mouseleave", () => { tip.style.opacity = 0; hv.setAttribute("opacity", 0); });
+}
+
+/* ---------------- backtest chart: actual vs predicted ---------------- */
+function drawBacktest(){
+  const d = DATA[METAL];
+  const svg = document.getElementById("svg-backtest");
+  const tip = document.getElementById("tip-backtest");
+  const box = document.getElementById("box-backtest");
+  clear(svg);
+
+  const W = 900, H = 320, ml = 62, mr = 22, mt = 16, mb = 42;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const bt = d.backtest, n = bt.length;
+
+  let lo = Infinity, hi = -Infinity;
+  bt.forEach(p => {
+    lo = Math.min(lo, p.actual, p.predicted);
+    hi = Math.max(hi, p.actual, p.predicted);
+  });
+  const pad = (hi - lo) * 0.12 || 10;
+  lo -= pad; hi += pad;
+
+  const X = i => ml + (i / (n - 1)) * iw;
+  const Y = v => mt + ih - ((v - lo) / (hi - lo)) * ih;
+
+  niceTicks(lo, hi, 5).forEach(t => {
+    el("line", {x1:ml, y1:Y(t), x2:ml+iw, y2:Y(t), class:"gridline"}, svg);
+    const lb = el("text", {x:ml-10, y:Y(t)+3.5, class:"axislbl", "text-anchor":"end"}, svg);
+    lb.textContent = fmtMoney(t);
+  });
+  const yt = el("text", {x:ml-10, y:mt-4, class:"axtitle", "text-anchor":"end"}, svg);
+  yt.textContent = "USD / tonne";
+
+  const every = Math.ceil(n / 8);
+  for (let i = 0; i < n; i += every){
+    const t = el("text", {x:X(i), y:mt+ih+20, class:"axislbl", "text-anchor":"middle"}, svg);
+    t.textContent = fmtDateShort(bt[i].date);
+  }
+
+  let pa = "", pp = "";
+  bt.forEach((p,i) => {
+    pa += (i ? " L " : "M ") + X(i) + " " + Y(p.actual);
+    pp += (i ? " L " : "M ") + X(i) + " " + Y(p.predicted);
+  });
+  el("path", {d:pp, fill:"none", stroke:"var(--series-model)", "stroke-width":2,
+              "stroke-linejoin":"round", "stroke-linecap":"round", opacity:.9}, svg);
+  el("path", {d:pa, fill:"none", stroke:"var(--series-actual)", "stroke-width":2,
+              "stroke-linejoin":"round", "stroke-linecap":"round"}, svg);
+
+  const hv = el("line", {x1:0,y1:mt,x2:0,y2:mt+ih, stroke:"var(--ink-soft)",
+                         "stroke-width":1, opacity:0}, svg);
+  const ma = el("circle", {r:5, fill:"var(--series-actual)", stroke:"var(--surface)",
+                           "stroke-width":2, opacity:0}, svg);
+  const mp = el("circle", {r:5, fill:"var(--series-model)", stroke:"var(--surface)",
+                           "stroke-width":2, opacity:0}, svg);
+
+  const hit = el("rect", {x:ml, y:mt, width:iw, height:ih, fill:"transparent"}, svg);
+  hit.style.cursor = "crosshair";
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width * W;
+    let i = Math.round((px - ml) / iw * (n - 1));
+    i = Math.max(0, Math.min(n-1, i));
+    const p = bt[i];
+    hv.setAttribute("x1", X(i)); hv.setAttribute("x2", X(i)); hv.setAttribute("opacity", .45);
+    ma.setAttribute("cx", X(i)); ma.setAttribute("cy", Y(p.actual)); ma.setAttribute("opacity", 1);
+    mp.setAttribute("cx", X(i)); mp.setAttribute("cy", Y(p.predicted)); mp.setAttribute("opacity", 1);
+    const miss = Math.abs(p.actual - p.predicted);
+    tip.innerHTML = `<div class="td">${fmtDate(p.date)}</div>
+      <div class="tr"><span class="swatch" style="background:var(--series-actual)"></span>
+      Actual<span class="tv">${fmtMoney(p.actual)}</span></div>
+      <div class="tr"><span class="swatch" style="background:var(--series-model)"></span>
+      Predicted<span class="tv">${fmtMoney(p.predicted)}</span></div>
+      <div class="tr" style="color:var(--ink-soft)">Off by<span class="tv">${fmtMoney(miss)}</span></div>`;
+    tip.style.opacity = 1;
+    const bw = box.clientWidth, scale = bw / W;
+    let left = X(i) * scale + 14;
+    if (left + tip.offsetWidth > bw) left = X(i)*scale - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = "18px";
+  });
+  hit.addEventListener("mouseleave", () => {
+    tip.style.opacity = 0; hv.setAttribute("opacity",0);
+    ma.setAttribute("opacity",0); mp.setAttribute("opacity",0);
+  });
+}
+
+/* ---------------- tiles, table, verdict ------------------------------ */
+function drawTiles(){
+  const d = DATA[METAL];
+  const best = d.leaderboard.find(r => !r.is_baseline);
+  const anySig = d.leaderboard.some(r => !r.is_baseline && r.relmae < 1 && r.p_vs_rw !== null && r.p_vs_rw < 0.05);
+  const beatsNumerically = d.leaderboard[0] && !d.leaderboard[0].is_baseline;
+
+  let vTxt, vCls, vNote;
+  if (anySig){ vTxt = "Beats the benchmark"; vCls = "var(--good)";
+    vNote = "A method beat 'do nothing' by a statistically real margin."; }
+  else if (beatsNumerically){ vTxt = "Statistical tie"; vCls = "var(--warn)";
+    vNote = "Best method edges ahead, but within noise — not a real advantage."; }
+  else { vTxt = "No edge found"; vCls = "var(--warn)";
+    vNote = "Nothing beat simply assuming tomorrow looks like today."; }
+
+  document.getElementById("tiles").innerHTML = `
+    <div class="tile"><span class="k">Latest price</span>
+      <span class="v">${fmtMoney(d.last_price)}</span>
+      <span class="n">${METAL[0].toUpperCase()+METAL.slice(1)}, per tonne, ${fmtDate(d.end)}</span></div>
+    <div class="tile"><span class="k">Data used</span>
+      <span class="v">${d.rows.toLocaleString()}</span>
+      <span class="n">trading days of real prices, ${d.start.slice(0,4)}–${d.end.slice(0,4)}</span></div>
+    <div class="tile"><span class="k">Typical daily move</span>
+      <span class="v">${d.typical_daily_move_pct}%</span>
+      <span class="n">Average size of a one-day price change — this is what a forecast must beat</span></div>
+    <div class="tile"><span class="k">Verdict</span>
+      <span class="v sm" style="color:${vCls}">${vTxt}</span>
+      <span class="n">${vNote}</span></div>`;
+
+  document.getElementById("meta-rows").textContent =
+    (DATA.zinc.rows + DATA.aluminium.rows).toLocaleString() + " trading days across both metals";
+  document.getElementById("meta-span").textContent =
+    DATA.zinc.start + " to " + DATA.zinc.end;
+}
+
+function drawBoard(){
+  const d = DATA[METAL];
+  const maxRel = Math.max(...d.leaderboard.map(r => r.relmae));
+  document.getElementById("board").innerHTML = d.leaderboard.map(r => {
+    const better = r.relmae < 1;
+    const w = Math.round((r.relmae / maxRel) * 150);
+    let sig;
+    if (r.is_baseline) sig = `<span class="pill pill-info">Benchmark</span>`;
+    else if (r.p_vs_rw === null) sig = "—";
+    else if (r.p_vs_rw < 0.05) sig = better
+      ? `<span class="pill pill-good">Yes — genuinely better</span>`
+      : `<span class="pill pill-crit">Yes — genuinely worse</span>`;
+    else sig = `<span class="pill pill-warn">No — within noise</span>`;
+    const dir = r.diracc === null ? "—" : (r.diracc*100).toFixed(0) + "%";
+    return `<tr class="${r.is_baseline ? "base" : ""}">
+      <td>${r.name}</td>
+      <td class="num">${r.relmae.toFixed(3)}</td>
+      <td><span class="bar ${better ? "better" : ""}" style="width:${w}px"></span></td>
+      <td class="num">${dir}</td>
+      <td>${sig}</td></tr>`;
+  }).join("");
+}
+
+function drawVerdict(){
+  const d = DATA[METAL];
+  const name = METAL[0].toUpperCase() + METAL.slice(1);
+  const best = d.leaderboard.find(r => !r.is_baseline && r.relmae < 1);
+  const worse = d.leaderboard.filter(r => !r.is_baseline && r.p_vs_rw !== null && r.p_vs_rw < 0.05 && r.relmae > 1);
+
+  const line = best
+    ? `On this window the best method (<strong>${best.name}</strong>) came in ${((1-best.relmae)*100).toFixed(1)}% better than doing nothing — but with p&nbsp;=&nbsp;${best.p_vs_rw}, that gap is comfortably inside the range you would expect from luck alone.`
+    : `On this window <strong>no method beat</strong> simply assuming tomorrow's price equals today's.`;
+
+  const worseLine = worse.length
+    ? ` Meanwhile ${worse.length} method${worse.length>1?"s came out significantly":" came out significantly"} <em>worse</em> than the benchmark — most notably the neural network, which is the most data-hungry model in the panel and has the least to work with here.`
+    : "";
+
+  document.getElementById("verdict").innerHTML = `
+    <div class="note">
+      <h3>What this actually means — ${name}</h3>
+      <p>${line}${worseLine}</p>
+      <p>This is the expected result, not a broken model. Daily metal prices on a large, closely-watched exchange are close to what economists call <strong>efficient</strong> — past prices alone carry very little exploitable information, because thousands of traders have already acted on them.</p>
+      <p><strong>Why that matters for this project:</strong> it is precisely the reason the research question is about a <em>physical</em> signal — how much metal is actually sitting in exchange warehouses — rather than more clever mathematics on the price history. The next step is testing whether that fundamental signal adds what price history cannot.</p>
+    </div>`;
+}
+
+function selectMetal(m){
+  METAL = m;
+  ["zinc","aluminium"].forEach(k =>
+    document.getElementById("tab-"+k).setAttribute("aria-selected", String(k===m)));
+  render();
+}
+
+function render(){ drawTiles(); drawForecast(); drawBacktest(); drawBoard(); drawVerdict(); }
+
+render();
+window.addEventListener("resize", () => { drawForecast(); drawBacktest(); });
+
+</script>
