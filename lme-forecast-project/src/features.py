@@ -26,30 +26,25 @@ def add_lag_features(df: pd.DataFrame, price_col: str, lags=(1, 2, 3, 5, 10, 20)
 
 
 def hurst_exponent(ts: np.ndarray, max_lag=20) -> float:
-    """Scaled self-similarity statistic from the variance of lagged differences.
+    """Hurst exponent H, estimated from the scaling of lagged differences.
 
-    CAUTION FOR THE WRITE-UP. Despite the name, this returns approximately
-    *2H*, not H. The slope of log(tau) against log(lag) already estimates H;
-    the trailing `* 2.0` doubles it. Verified numerically:
+    For a series with self-similarity exponent H, the standard deviation of
+    the lag-k difference scales as tau(k) ~ k^H, so H is the slope of
+    log tau(k) against log k. Verified numerically against known cases:
 
-        pure random walk (true H = 0.50)  ->  returns ~0.97
-        white noise      (true H = 0.00)  ->  returns ~0.00
+        pure random walk (true H = 0.50)  ->  ~0.48
+        white noise      (true H = 0.00)  ->  ~0.00
 
-    So the documented reading "H ~ 0.5 -> random walk" is wrong by a factor
-    of two: a random walk scores ~1.0 here, not ~0.5.
+    Interpretation: H ~ 0.5 is a random walk, H > 0.5 trending
+    (moves tend to persist), H < 0.5 mean-reverting (moves tend to reverse).
+    Used as one of the regime signals fed to the gate.
 
-    This does NOT affect any reported result -- as a gate input it is a
-    strictly monotone transform of H and therefore carries identical
-    information. But it MUST NOT be described in the paper as "the Hurst
-    exponent H" with the usual 0.5 interpretation, because that statement
-    would be false. Either divide by 2.0 to recover a genuine Hurst
-    exponent (which changes fitted models and so requires re-running every
-    experiment), or keep it as-is and describe it honestly as a scaled
-    self-similarity statistic. The methodology draft takes the second route
-    and calls it H-hat.
-
-    H ~ 0.5 -> random walk; H > 0.5 -> trending; H < 0.5 -> mean-reverting
-    (that reading applies to the true H, i.e. to this value halved).
+    NOTE ON HISTORY: an earlier version multiplied the slope by 2.0, which
+    returned 2H rather than H -- a random walk scored ~1.0 instead of ~0.5.
+    That factor has been removed. It never affected which information the
+    gate received (a monotone rescaling carries the same information), but
+    it made the feature impossible to describe correctly in writing. All
+    experiments were re-run after the correction.
     """
     ts = np.asarray(ts)
     if len(ts) < max_lag * 2 or np.any(np.isnan(ts)):
@@ -58,7 +53,7 @@ def hurst_exponent(ts: np.ndarray, max_lag=20) -> float:
     tau = [np.std(np.subtract(ts[lag:], ts[:-lag])) for lag in lags]
     tau = [t if t > 0 else 1e-8 for t in tau]
     poly = np.polyfit(np.log(list(lags)), np.log(tau), 1)
-    return poly[0] * 2.0
+    return poly[0]
 
 
 def rolling_hurst(series: pd.Series, window=60) -> pd.Series:

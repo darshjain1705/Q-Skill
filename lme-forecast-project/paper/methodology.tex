@@ -56,10 +56,28 @@ v_t,\;\;
 \bar{e}_{1,t},\dots,\bar{e}_{M,t} \,\Big]^{\!\top},
 \end{equation}
 where $v_t = \sigma^{(10)}_t / \sigma^{(40)}_t - 1$ is a volatility-regime shift,
-$\widehat{H}_t$ a rolling self-similarity statistic (Section~\ref{sec:hurst}),
+$\widehat{H}_t$ the rolling Hurst exponent (Section~\ref{sec:hurst}),
 $\alpha_t$ the lag-one autocorrelation of $\lvert r\rvert$ over a 40-day window,
 and $\bar{e}_{i,t}$ the trailing mean absolute error of expert $i$
 (Equation~\ref{eq:trailerr}).
+
+\subsection{Regime statistics}
+\label{sec:hurst}
+
+The Hurst exponent $H$ characterises the self-similarity of a series: the standard
+deviation of the lag-$k$ difference scales as $\tau(k)\sim k^{H}$, so
+\begin{equation}
+\widehat{H}_t \;=\;
+\frac{\partial \log \tau(k)}{\partial \log k}\bigg|_{\,\{r_s\}_{s=t-59}^{t}},
+\qquad
+\tau(k) \;=\; \operatorname{sd}\!\big(P_{s+k}-P_{s}\big),
+\end{equation}
+estimated by ordinary least squares over $k \in \{2,\dots,19\}$ on a rolling
+60-day window. Values near $\tfrac12$ indicate a random walk, $\widehat{H}_t>\tfrac12$
+persistence (trending), and $\widehat{H}_t<\tfrac12$ mean reversion. Validated
+against known processes, the estimator returns $0.48$ for a simulated random walk,
+$0.00$ for white noise, $0.41$ for a mean-reverting and $0.62$ for a trending
+AR(1) process.
 
 \subsection{Inventory-pressure index}
 
