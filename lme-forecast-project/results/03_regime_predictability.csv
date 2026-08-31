@@ -1,9 +1,9 @@
 metal,condition,classifier,n_gate_features,AUC
-zinc,neither,logistic,4.0,0.5919226270857699
+zinc,neither,logistic,4.0,0.5907005503720189
 zinc,neither,random_forest,4.0,0.5777637454463788
-zinc,routing,logistic,5.0,0.8486316532452116
+zinc,routing,logistic,5.0,0.8501308117914361
 zinc,routing,random_forest,5.0,0.8384262918575858
-aluminium,neither,logistic,4.0,0.6784862809998606
+aluminium,neither,logistic,4.0,0.678513590644808
 aluminium,neither,random_forest,4.0,0.6412072501645407
-aluminium,routing,logistic,5.0,0.8976106791635602
+aluminium,routing,logistic,5.0,0.8975041715482658
 aluminium,routing,random_forest,5.0,0.8796026992853067
