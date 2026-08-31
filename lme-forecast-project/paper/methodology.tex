@@ -1,0 +1,293 @@
+% ============================================================
+%  Mathematical formulation — LME zinc/aluminium forecasting
+%  Routing vs. Representation with a Confidence-Thresholded Router
+%
+%  Every equation below matches the implementation in src/.
+%  Paste into your paper's Methodology section.
+%
+%  Requires: amsmath, amssymb, bm  (all standard)
+% ============================================================
+
+\section{Methodology}
+
+\subsection{Problem setup and notation}
+
+Let $P_t$ denote the daily closing price of a base metal on day $t$, and define the
+log return
+\begin{equation}
+r_t \;=\; \ln P_t - \ln P_{t-1}.
+\end{equation}
+The forecasting target is the \emph{next-day} log return,
+\begin{equation}
+y_t \;=\; r_{t+1},
+\qquad
+\hat{y}_t \;=\; \mathbb{E}\!\left[r_{t+1} \mid \mathcal{F}_t\right],
+\end{equation}
+where $\mathcal{F}_t$ is the information set available at the close of day $t$.
+Forecasting returns rather than price levels is deliberate: on levels the
+random-walk predictor $\hat{P}_{t+1}=P_t$ attains near-zero relative error and
+dominates any accuracy comparison, so a level-based evaluation is uninformative.
+Price forecasts are recovered as $\hat{P}_{t+1} = P_t \exp(\hat{y}_t)$.
+
+\subsection{Feature construction}
+
+Two disjoint feature sets are constructed, and the central experimental
+manipulation is which of them receives the fundamental signal.
+
+\paragraph{Expert features.} The vector $\bm{x}_t \in \mathbb{R}^{16}$ supplied to
+the forecasting models comprises, with lag set $\mathcal{L}=\{1,2,3,4,5,10\}$,
+\begin{align}
+\text{lagged returns:}\quad & r_{t-\ell+1}, && \ell \in \mathcal{L},\\
+\text{lagged magnitudes:}\quad & \lvert r_{t-\ell+1}\rvert, && \ell \in \mathcal{L},\\
+\text{realised volatility:}\quad & \sigma^{(w)}_t = \operatorname{sd}\!\big(\{r_s\}_{s=t-w+1}^{t}\big), && w \in \{5,10,20\},\\
+\text{trend ratio:}\quad & \rho_t = \frac{\mathrm{MA}_5(P)_t}{\mathrm{MA}_{20}(P)_t} - 1. &&
+\end{align}
+All components are measurable with respect to $\mathcal{F}_t$.
+
+\paragraph{Gate state.} The router observes a separate market-state vector
+$\bm{s}_t$,
+\begin{equation}
+\bm{s}_t \;=\;
+\Big[\, \sigma^{(20)}_t,\;\;
+v_t,\;\;
+\widehat{H}_t,\;\;
+\alpha_t,\;\;
+\underbrace{\mathrm{IPI}_t}_{\text{routing conditions only}},\;\;
+\bar{e}_{1,t},\dots,\bar{e}_{M,t} \,\Big]^{\!\top},
+\end{equation}
+where $v_t = \sigma^{(10)}_t / \sigma^{(40)}_t - 1$ is a volatility-regime shift,
+$\widehat{H}_t$ a rolling self-similarity statistic (Section~\ref{sec:hurst}),
+$\alpha_t$ the lag-one autocorrelation of $\lvert r\rvert$ over a 40-day window,
+and $\bar{e}_{i,t}$ the trailing mean absolute error of expert $i$
+(Equation~\ref{eq:trailerr}).
+
+\subsection{Inventory-pressure index}
+
+The fundamental signal is a composite of the exchange warehouse stock level $I_t$,
+its first difference $\Delta I_t$, and the volatility of that difference. With
+$z_W(\cdot)$ denoting a rolling $W$-day $z$-score,
+\begin{equation}
+z_W(u)_t \;=\; \frac{u_t - \operatorname{mean}_W(u)_t}{\operatorname{sd}_W(u)_t},
+\end{equation}
+the index is
+\begin{equation}
+\label{eq:ipi}
+\mathrm{IPI}_t \;=\;
+-\,\omega_L\, z_W(I)_t
+\;+\; \omega_\Delta\, z_W(-\Delta I)_t
+\;+\; \omega_V\, z_W\!\big(\operatorname{sd}_W(\Delta I)\big)_t ,
+\end{equation}
+with $W=20$ and weights $\bm{\omega}=(\omega_L,\omega_\Delta,\omega_V)=(0.5,0.3,0.2)$.
+The leading negative sign encodes the economic direction of the theory of storage:
+\emph{low} stocks imply \emph{high} physical scarcity. The weights are a design
+parameter rather than an estimated quantity; sensitivity to $\bm{\omega}$ is
+reported as a robustness check.
+
+\subsection{Expert panel}
+
+$M=4$ heterogeneous one-step-ahead forecasters $f_i:\mathbb{R}^{16}\to\mathbb{R}$
+are used, chosen to span distinct hypothesis classes:
+\begin{align}
+f_1 \;&:\; \text{ridge autoregression, } \; \textstyle f_1(\bm{x}_t)=\beta_0+\sum_{\ell\in\mathcal{L}}\beta_\ell\, r_{t-\ell+1},
+&& \hat{\bm\beta}=\arg\min_{\bm\beta}\;\lVert \bm{y}-\bm{X}\bm\beta\rVert_2^2+\alpha\lVert\bm\beta\rVert_2^2 ,\\
+f_2 \;&:\; \text{ARIMA}(2,0,1) \text{ fitted on } \{r_t\}, && \text{parameters fixed on the training window},\\
+f_3 \;&:\; \text{gradient-boosted regression trees}, && \textstyle f_3(\bm{x})=\sum_{b=1}^{B}\eta\, h_b(\bm{x}),\\
+f_4 \;&:\; \text{multilayer perceptron}, && f_4(\bm{x})=\bm{W}_3\,\phi(\bm{W}_2\,\phi(\bm{W}_1\bm{x}+\bm{b}_1)+\bm{b}_2)+b_3 ,
+\end{align}
+with $\phi=\mathrm{ReLU}$. The target of $f_4$ is standardised before fitting and
+the prediction inverse-transformed, without which the $\mathcal{O}(10^{-2})$ scale
+of daily returns prevents convergence.
+
+\subsection{Combination layer}
+
+All combiners produce a convex weighting of the panel,
+\begin{equation}
+\label{eq:combine}
+\hat{y}_t \;=\; \sum_{i=1}^{M} w_{i,t}\, f_i(\bm{x}_t),
+\qquad w_{i,t}\ge 0,\quad \sum_{i=1}^{M} w_{i,t}=1 ,
+\end{equation}
+and differ only in how $\bm{w}_t$ is produced.
+
+\paragraph{Static combiner (control).} A single time-invariant weight vector
+obtained by non-negative least squares on out-of-fold predictions
+$\tilde{f}_i$ (Section~\ref{sec:oof}),
+\begin{equation}
+\label{eq:static}
+\bm{w}^{S} \;=\; \frac{\bm{u}}{\bm{1}^{\!\top}\bm{u}},
+\qquad
+\bm{u} \;=\; \arg\min_{\bm{u}\succeq \bm{0}}\;
+\sum_{t}\Big(y_t - \sum_i u_i\,\tilde{f}_i(\bm{x}_t)\Big)^{2}.
+\end{equation}
+This is the benchmark any state-dependent router must beat; if it cannot, the
+\emph{dynamic} component of the architecture is not doing any work.
+
+\paragraph{Gated mixture of experts.} Let $e_{i,t}=f_i(\bm{x}_t)-y_t$ and define
+the supervision target as a softmax over scaled negative error,
+\begin{equation}
+\label{eq:oracle}
+\bm{a}_t \;=\; \mathrm{softmax}\!\left(-\,\frac{\bm{b}_t}{\tau\,\operatorname{sd}_i(b_{i,t})}\right),
+\qquad
+b_{i,t} \;=\;
+\begin{cases}
+\lvert e_{i,t}\rvert & \text{(forward)},\\[2pt]
+\bar{e}_{i,t} & \text{(trailing)},
+\end{cases}
+\end{equation}
+where the division by the \emph{cross-expert} dispersion $\operatorname{sd}_i(b_{i,t})$
+renders the temperature $\tau$ dimensionless, and
+\begin{equation}
+\label{eq:trailerr}
+\bar{e}_{i,t} \;=\; \frac{1}{L}\sum_{u=1}^{L}\lvert e_{i,\,t-u}\rvert
+\end{equation}
+is lagged by one step so that $\bm{s}_t$ remains $\mathcal{F}_t$-measurable. The
+gate $g_{\bm\theta}$ is trained on centred log-targets and normalised at inference,
+\begin{equation}
+\bm{w}^{G}_t \;=\; g_{\bm\theta}(\bm{s}_t) \;=\; \mathrm{softmax}\big(m_{\bm\theta}(\bm{s}_t)\big),
+\qquad
+\bm{\theta} \;=\; \arg\min_{\bm\theta}\sum_t \big\lVert m_{\bm\theta}(\bm{s}_t) - \log \bm{a}_t \big\rVert_2^2 .
+\end{equation}
+Regressing onto $\log \bm{a}_t$ rather than $\bm{a}_t$ matters: an unconstrained
+output layer cannot respect the simplex, and clipping negative outputs can
+permanently eliminate an expert.
+
+\subsection{Confidence-thresholded cluster router}
+
+The proposed router addresses a failure mode of Equation~\ref{eq:combine} under a
+learned $\bm{w}_t$: existing routers commit at full strength irrespective of how
+reliable their own state estimate is. Let $\bm{\pi}_t$ be the row-normalised error
+profile,
+\begin{equation}
+\pi_{i,t} \;=\; \frac{\lvert e_{i,t}\rvert}{\sum_{j}\lvert e_{j,t}\rvert}
+\;\in\;\Delta^{M-1},
+\end{equation}
+which captures \emph{which expert wins} independently of how difficult the day was.
+Latent regimes are recovered by $K$-means on $\{\bm{\pi}_t\}$, yielding clusters
+$\mathcal{C}_1,\dots,\mathcal{C}_K$ with cluster-conditional weights
+$\bm{w}^{(k)}$ obtained by Equation~\ref{eq:static} restricted to $\mathcal{C}_k$.
+A probabilistic classifier maps market state to cluster membership,
+$q_{k,t} = \Pr(c_t = k \mid \bm{s}_t)$, giving routed weights
+\begin{equation}
+\bm{w}^{R}_t \;=\; \sum_{k=1}^{K} q_{k,t}\, \bm{w}^{(k)} .
+\end{equation}
+Router confidence is the top-two margin
+$\kappa_t = q_{(1),t} - q_{(2),t} \in [0,1]$, and the final weights shrink toward
+the static solution as confidence falls,
+\begin{equation}
+\label{eq:ctcr}
+\boxed{\;
+\bm{w}_t \;=\; \lambda(\kappa_t)\,\bm{w}^{R}_t \;+\; \big(1-\lambda(\kappa_t)\big)\,\bm{w}^{S},
+\qquad
+\lambda(\kappa) \;=\; \mathrm{clip}\!\left(\frac{\kappa-\kappa^{*}}{1-\kappa^{*}},\,0,\,1\right).
+\;}
+\end{equation}
+The threshold $\kappa^{*}$ is \emph{estimated}, not tuned. On a held-out
+calibration slice of the training window, define the realised routing benefit
+\begin{equation}
+\Delta_t \;=\; \big\lvert y_t - \hat{y}^{S}_t \big\rvert - \big\lvert y_t - \hat{y}^{R}_t \big\rvert ,
+\end{equation}
+fit an isotonic (monotone non-decreasing) regression $\widehat{\Delta}(\kappa)$ of
+$\Delta_t$ on $\kappa_t$, and take the zero crossing
+\begin{equation}
+\kappa^{*} \;=\; \inf\{\kappa : \widehat{\Delta}(\kappa) > 0\} .
+\end{equation}
+
+\subsection{Break-even routing accuracy}
+\label{sec:breakeven}
+
+The following elementary result gives the accuracy a router must attain before
+state-dependent combination is worth performing at all. Define three reference
+losses under the panel: $A$, the loss when regime-conditional weights are always
+applied correctly; $B$, the loss when they are always applied to the wrong regime;
+and $S$, the loss of the static combiner of Equation~\ref{eq:static}.
+
+\begin{proposition}
+A router that selects the correct regime with probability $p$, independently of
+the loss realisation, attains expected loss $L(p) = pA + (1-p)B$. It improves on
+the static combiner if and only if
+\begin{equation}
+\label{eq:pstar}
+p \;>\; p^{*} \;\equiv\; \frac{B-S}{B-A}.
+\end{equation}
+Moreover $p^{*} > \tfrac{1}{2}$ whenever $S < \tfrac{1}{2}(A+B)$.
+\end{proposition}
+
+\begin{proof}
+$L(p) < S \iff pA + (1-p)B < S \iff p(A-B) < S-B$. Since $A<B$, dividing by
+$A-B<0$ reverses the inequality, giving $p > (B-S)/(B-A)$. For the second claim,
+$p^{*}>\tfrac12 \iff 2(B-S) > B-A \iff A+B > 2S$.
+\end{proof}
+
+The practical content of Equation~\ref{eq:pstar} is that $p^{*}$ is \emph{not}
+$\tfrac{1}{2}$: a well-fitted static combiner sits far closer to $A$ than to $B$,
+which pushes the break-even well above a coin flip. Routing is therefore a wager
+that must clear a high bar before it pays, and reporting $p^{*}$ alongside a
+measured classifier accuracy makes a negative routing result interpretable rather
+than merely disappointing.
+
+\subsection{Out-of-fold construction of combiner inputs}
+\label{sec:oof}
+
+Combiner weights must be learned from expert predictions on data the experts did
+not fit, or the combiner rewards memorisation. Within each training window
+$\mathcal{T}$, contiguous forward-only blocks $\mathcal{B}_1,\dots,\mathcal{B}_J$
+are formed after a warm-up, and
+\begin{equation}
+\tilde{f}_i(\bm{x}_t) \;=\; f_i^{\,(<\!j)}(\bm{x}_t),
+\qquad t \in \mathcal{B}_j ,
+\end{equation}
+where $f_i^{\,(<\!j)}$ is expert $i$ fitted on $\{s \in \mathcal{T} : s < \min \mathcal{B}_j\}$.
+Blocks are contiguous and forward-only; shuffled $k$-fold would let an expert
+train on the future of its own evaluation rows.
+
+\subsection{Evaluation}
+
+Let $\hat{y}^{\mathrm{RW}}_t = 0$ denote the random-walk benchmark on returns.
+Reported statistics are
+\begin{align}
+\mathrm{MAE} &= \frac{1}{n}\sum_t \lvert y_t-\hat{y}_t\rvert,
+&
+\mathrm{RelMAE} &= \frac{\mathrm{MAE}(\hat{y})}{\mathrm{MAE}(\hat{y}^{\mathrm{RW}})},
+&
+\mathrm{MASE} &= \frac{\mathrm{MAE}(\hat{y})}{\frac{1}{n_{\mathcal{T}}-1}\sum_{t\in\mathcal{T}}\lvert y_t-y_{t-1}\rvert}.
+\end{align}
+Directional accuracy is computed with explicit abstention: timesteps where
+$\lvert \hat{y}_t\rvert \le \epsilon$ express no directional view and are excluded
+from the accuracy while the decision rate is reported separately, avoiding the
+degenerate scoring of a zero-valued benchmark.
+
+Equal predictive accuracy between two forecasts is tested by
+Diebold--Mariano \cite{diebold1995}. With loss differential
+$d_t = \lvert e^{A}_t\rvert^{k} - \lvert e^{B}_t\rvert^{k}$,
+\begin{equation}
+\mathrm{DM} \;=\; \frac{\bar{d}}{\sqrt{\hat{\gamma}_0/n}}
+\cdot
+\sqrt{\frac{n+1-2h+h(h-1)/n}{n}},
+\qquad
+\hat{\gamma}_0 = \frac{1}{n}\sum_t (d_t-\bar{d})^2 ,
+\end{equation}
+including the Harvey--Leybourne--Newbold small-sample correction, referred to a
+$t_{n-1}$ distribution.
+
+All results use expanding-window walk-forward evaluation: for fold
+$k=1,\dots,K$, all components are fitted on $\{1,\dots,T_k\}$ and evaluated on
+$\{T_k+1,\dots,T_{k+1}\}$, with predictions pooled across folds before metrics are
+computed.
+
+\subsection{Experimental design}
+
+The central manipulation places $\mathrm{IPI}_t$ (Equation~\ref{eq:ipi}) in the
+expert features, the gate state, both, or neither:
+\begin{center}
+\begin{tabular}{lcc}
+\hline
+& gate without $\mathrm{IPI}$ & gate with $\mathrm{IPI}$ \\
+\hline
+experts without $\mathrm{IPI}$ & (a) neither & (c) routing only \\
+experts with $\mathrm{IPI}$ & (b) representation & (d) both \\
+\hline
+\end{tabular}
+\end{center}
+All four conditions share one feature frame, one set of folds and one listwise
+deletion, so they differ only in which columns each component may read. Condition
+(c) isolates the hypothesis that a fundamental signal is more valuable for
+selecting \emph{among} forecasters than for improving any single forecast.

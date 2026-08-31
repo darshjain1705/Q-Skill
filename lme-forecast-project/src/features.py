@@ -26,9 +26,31 @@ def add_lag_features(df: pd.DataFrame, price_col: str, lags=(1, 2, 3, 5, 10, 20)
 
 
 def hurst_exponent(ts: np.ndarray, max_lag=20) -> float:
-    """Rough-and-ready Hurst exponent estimate via rescaled range.
-    H ~ 0.5 -> random walk; H > 0.5 -> trending; H < 0.5 -> mean-reverting.
-    Used as one of the regime-detection signals fed to the gate."""
+    """Scaled self-similarity statistic from the variance of lagged differences.
+
+    CAUTION FOR THE WRITE-UP. Despite the name, this returns approximately
+    *2H*, not H. The slope of log(tau) against log(lag) already estimates H;
+    the trailing `* 2.0` doubles it. Verified numerically:
+
+        pure random walk (true H = 0.50)  ->  returns ~0.97
+        white noise      (true H = 0.00)  ->  returns ~0.00
+
+    So the documented reading "H ~ 0.5 -> random walk" is wrong by a factor
+    of two: a random walk scores ~1.0 here, not ~0.5.
+
+    This does NOT affect any reported result -- as a gate input it is a
+    strictly monotone transform of H and therefore carries identical
+    information. But it MUST NOT be described in the paper as "the Hurst
+    exponent H" with the usual 0.5 interpretation, because that statement
+    would be false. Either divide by 2.0 to recover a genuine Hurst
+    exponent (which changes fitted models and so requires re-running every
+    experiment), or keep it as-is and describe it honestly as a scaled
+    self-similarity statistic. The methodology draft takes the second route
+    and calls it H-hat.
+
+    H ~ 0.5 -> random walk; H > 0.5 -> trending; H < 0.5 -> mean-reverting
+    (that reading applies to the true H, i.e. to this value halved).
+    """
     ts = np.asarray(ts)
     if len(ts) < max_lag * 2 or np.any(np.isnan(ts)):
         return np.nan
