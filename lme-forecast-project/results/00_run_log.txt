@@ -1,4 +1,4 @@
-Reproduction run started 2026-08-14 12:23:45
+Reproduction run started 2026-08-31 09:04:42
 numpy 2.4.6 | pandas 3.0.5 | python 3.11.15
 
 ==============================================================================
@@ -44,13 +44,13 @@ aluminium ridge_ar             0.0091                0.0119               0.9056
 ==============================================================================
                                    n_gate_features     AUC
 metal     condition classifier                            
-zinc      neither   logistic                   4.0  0.5919
+zinc      neither   logistic                   4.0  0.5907
                     random_forest              4.0  0.5778
-          routing   logistic                   5.0  0.8486
+          routing   logistic                   5.0  0.8501
                     random_forest              5.0  0.8384
 aluminium neither   logistic                   4.0  0.6785
                     random_forest              4.0  0.6412
-          routing   logistic                   5.0  0.8976
+          routing   logistic                   5.0  0.8975
                     random_forest              5.0  0.8796
     -> results/03_regime_predictability.csv
 
@@ -304,4 +304,4 @@ both                 0.010591         0.010087      0.951618   0.010591    0.009
     -> results/05_aluminium_routing_vs_representation.csv
     -> results/05_aluminium_gate_diagnostics.csv
 
-Completed in 13.3 minutes.
+Completed in 110.1 minutes.
